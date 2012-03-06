@@ -1,0 +1,434 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * ToppleMod
+ * 
+ * - A Custom Module to provide key functionality and features to Topple
+ * 
+ * Contributors: Grant Taylor
+ * 
+ * 
+ */
+
+
+/**
+ * 
+ * Overrides default user registration form.
+ * 
+ * @param $form 
+ * @param $form_state 
+ */
+function topplemod_form_user_register_form_alter(&$form, $form_state) {
+  
+  $date = date('Y-m-d');
+  $date_format = 'd/m/Y';
+  
+  
+  
+  // Alters existing registration form and some fields within
+  $form['account']['#type'] = 'fieldset';
+  $form['account']['#title'] = t('Account Details');
+  $form['account']['#weight'] = '0';
+  $form['account']['name']['#weight'] = '0';
+  
+  $form['account']['domain_user']['#access'] = TRUE;
+  
+  $form['actions']['submit']['#access'] = FALSE;
+  $form['#validate'][] = 'topplemod_user_validation';
+      
+  
+  $form['account']['fname'] = array(
+    '#title' => t('First Name'),
+    '#type' => 'textfield',
+    '#default_value' => empty($form_state['values']['account']['fname']) ? '' : $form_state['values']['account']['fname'],
+    '#maxlength' => 40,
+    '#required' => TRUE,
+  );
+  
+  $form['account']['lname'] = array(
+    '#title' => t('Last Name'),
+    '#type' => 'textfield',
+    '#maxlength' => 40,
+    '#required' => TRUE,
+  );
+  
+  $form['account']['gender'] = array (
+    '#title' => t('Gender'),
+    '#type' => 'select',
+    '#default_value' => array(''),
+    '#options' => array('' => t(' '), 'male' => t('Male'), 'female' => t('Female')),
+    '#required' => TRUE,
+  );
+  
+  $form['account']['birthday'] = array (
+    '#title' => t('Date of Birth'),
+    '#description' => t('Required for verification, you must be over 18 to make a Topple Account'),
+   // '#default_value' => $date,
+    '#date_format' => $date_format,
+    '#date_year_range' => '-100:+0',
+    '#type' => 'date_popup',
+    '#required' => TRUE,
+  );
+  
+  $form['account']['address1'] = array(
+    '#title' => t('Address 1'),
+    '#type' => 'textfield',
+    '#maxlength' => 100,
+    '#description' => t('If you are creating a store account, enter an address associated with your store'),
+    '#required' => TRUE,
+  );
+  
+  $form['account']['address2'] = array(
+    '#title' => t('Address 2'),
+    '#type' => t('textfield'),
+    '#maxlength' => 150,
+    '#default_value' => t(''),
+  );
+  
+  
+  $form['account']['suburb'] = array(
+    '#title' => t('Suburb'),
+    '#type' => 'textfield',
+    '#maxlength' => 100,
+    '#required' => TRUE,
+  );
+  
+  
+  
+  $form['account']['city'] = array(
+    '#title' => t('City'),
+    '#type' => 'textfield',
+    '#maxlength' => 70,
+    '#required' => TRUE,
+  );
+  
+  
+  $form['account']['postcode'] = array(
+    '#title' => t('Postcode'),
+    '#type' => 'textfield',
+    '#maxlength' => 4,
+    '#rules' => array(
+      array('rule' => 'length[4]', 'error' => 'Postcode must be a valid 4 digit number'),
+      array('rule' => 'numeric', 'error' => 'Postcode must be a valid 4 digit number'),
+    ),
+    '#required' => TRUE,
+    '#field_suffix' => t('<a href="http://tools.nzpost.co.nz/tools/address-postcode-finder/APLT2008.aspx?from=redirect#post_code_finder" target="_blank">Find your Postcode</a>'),
+  );
+  
+  $form['account']['country'] = array(
+    '#title' => t('Country'),
+    '#type' => 'textfield',
+    '#maxlength' => 60,
+    '#description' => t('Sorry, Topple is currently only open to New Zealand Residents'),
+    '#disabled' => TRUE,
+    '#default_value' => t('New Zealand'),
+  );
+  
+  $form['account']['role'] = array(
+    '#title' => t('Would you like to make a Topple User Account or a Topple Store Account?'),
+    '#type' => 'radios',
+    '#default_value' => 'user',
+    '#description' => t('A store account lets you sell your products, whilst a user account gives you added bonuses and features for buying products'),
+    '#options' => array('store' => t('Store'), 'user' => t('User')),
+    '#required' => TRUE,
+  );
+
+ 
+  //fieldset to hold additional standard account fields -- None at the moment.
+  $form['standard'] = array(
+    '#title' => t('Topple User Account Details'),
+    '#type' => 'fieldset',
+    '#access' => FALSE,
+    '#collapsible' => FALSE,
+    '#collapsed' => FALSE,
+    '#states' => array(
+      'visible' => array(
+        ':input[name="role"]' => array('value' => 'user'),
+      ),
+    ),
+  );
+  
+  //fieldset to hold store based fields.
+  $form['store'] = array(
+    '#title' => t('Topple Store Account Details'),
+    '#type' => 'fieldset',
+    '#collapsible' => FALSE,
+    '#collapsed' => FALSE,
+    '#states' => array(
+      'visible' => array(
+        ':input[name="role"]' => array('value' => 'store'),
+      ),
+    ),
+  );
+  
+  $form['store']['storename'] = array(
+    '#title' => t('Store Name'),
+    '#description' => t('The name of your Topple Store, e.g. Fancy Fishing Gear '),
+    '#type' => 'textfield',
+    '#default_value' => '',
+    '#maxlength' => 100,
+    '#states' => array(
+      'required' => array(
+        ':input[name="role"]' => array('value' => 'store'),
+       ),
+      ),
+
+  );
+
+  $form['store']['storeurl'] = array(
+    '#title' => t('Store URL'),
+    '#description' => t('The url given to your store, choose carefully as this cannot be changed. (for now at least)'),
+    '#type' => 'textfield',
+    '#default_value' => '',
+    '#rules' => array(
+      array('rule' => 'alpha_numeric', 'error' => 'Store URL must only contain alpha numeric characters and no spaces.'),
+    ),
+    '#field_suffix' => t('.Topple.co.nz'),
+    '#maxlength' => 20,
+    '#size' => 30,
+    '#states' => array(
+        'required' => array(
+          ':input[name="role"]' => array('value' => 'store'),
+         ),
+        ),
+  );
+  
+  $form['store']['storedesc'] = array(
+    '#title' => t('Store Description'),
+    '#description' => t('A short description of your store, this and additional store details can be changed later in your store options.'),
+    '#type' => 'textarea',
+    '#default_value' => '',
+    '#maxlength' => 300,
+    '#states' => array(
+      'required' => array(
+        ':input[name="role"]' => array('value' => 'store'),
+       ),
+      ),
+  );
+  
+   $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Create New Account'),
+    '#submit' => array('topplemod_user_submit'),
+  );
+  
+  
+  return $form; 
+}
+
+
+/**
+ * Custom validation method.
+ * 
+ * validates:
+ *  -postcode
+ *  -birthday no one under 18 -TODO: tweak it to make it perfect...
+ *
+ * @param $form
+ * @param $form_state
+ */
+function topplemod_user_validation($form, &$form_state){
+  
+  
+  drupal_set_message('custom validation firing','warning');
+  
+  //store fields are only required if user picks store, so we must implement custom "required" validation for these fields.
+  if($form_state['values']['role'] == 'store' ){
+    if(trim($form_state['values']['storename']) == ''){
+      form_set_error('Store Name', 'Store Name is required');
+    
+    }elseif((bool)db_select('users_store')
+              ->fields('users_store',array('storename'))
+              ->condition('storename', db_like($form_state['values']['storename']),'LIKE')
+              ->range(0,1)
+              ->execute()
+              ->fetchField()){//checks store name is not already in use
+   
+      form_set_error('Store Name', t('The Store Name %storename is already taken.', array('%storename' => $form_state['values']['storename'])));
+    }
+    
+    if(trim($form_state['values']['storeurl']) == ''){
+      form_set_error('Store URL', 'Store URL is required');
+    }
+    if(trim($form_state['values']['storedesc']) == ''){
+      form_set_error('Store Description', 'Store Description is required');
+    }
+    
+  }
+    
+  
+  //birthday validation, checks user is 18 or older
+  $birthday = $form_state['values']['birthday'];
+  drupal_set_message($birthday,'warning');
+  
+  drupal_set_message(gettype($form_state['values']['birthday']),'warning');
+  
+  dpm($form_state);
+  if(gettype($form_state['values']['birthday'])!='array'){ 
+      drupal_set_message('after','warning');
+
+    list($Y,$m,$d) = explode("-",$birthday);
+    $years = date("Y") - $Y;  
+    if( date("md") < $m.$d ){ 
+      $years--; 
+    }
+    if($years < 18){
+      form_set_error('Birthday', 'Sorry, Topple is only available to those 18 years and older.');
+    }
+    
+  }
+  
+  
+ 
+  
+}
+
+/**
+ * Submission form for custom registration
+ * 
+ * @param $form
+ * @param $form_state
+ */
+function topplemod_user_submit($form, &$form_state){
+  
+  //timezone used to display page
+  $timezone = date_default_timezone_get();
+  
+  //Initially create user and place in users table
+  $edit = array(
+          'name' => $form_state['values']['name'],
+          'pass' => 'test',
+          'mail' => $form_state['values']['mail'],
+          'init' => $form_state['values']['mail'],
+          'status' => 1,
+          'access' => REQUEST_TIME,
+          'signature_format' => 'filtered_html',
+          'timezone' => $timezone,
+          
+          //custom user fields, saved to data column
+          'fname' => array(LANGUAGE_NONE => array(array('value' =>
+            $form_state['values']['fname']))),
+          'lname' => array(LANGUAGE_NONE => array(array('value' =>
+            $form_state['values']['lname']))),
+          'gender' => array(LANGUAGE_NONE => array(array('value' =>
+            $form_state['values']['gender']))),
+          'birthday' => array(LANGUAGE_NONE => array(array('value' =>
+            $form_state['values']['birthday']))),
+          'address1' => array(LANGUAGE_NONE => array(array('value' =>
+            $form_state['values']['address1']))),
+          'address2' => array(LANGUAGE_NONE => array(array('value' =>
+            $form_state['values']['address2']))),
+          'suburb' => array(LANGUAGE_NONE => array(array('value' =>
+            $form_state['values']['suburb']))),
+          'city' => array(LANGUAGE_NONE => array(array('value' =>
+            $form_state['values']['city']))),
+          'postcode' => array(LANGUAGE_NONE => array(array('value' =>
+            $form_state['values']['postcode']))),
+          'country' => array(LANGUAGE_NONE => array(array('value' =>
+            $form_state['values']['country']))),
+            
+            
+           'role' => array(LANGUAGE_NONE => array(array('value' =>
+            $form_state['values']['role']))),
+
+          //custom store fields
+          
+          'storename' => array(LANGUAGE_NONE => array(array('value' =>
+            $form_state['values']['storename']))),
+          'storeurl' => array(LANGUAGE_NONE => array(array('value' =>
+            $form_state['values']['storeurl']))), 
+          'storedesc' => array(LANGUAGE_NONE => array(array('value' =>
+            $form_state['values']['storedesc']))),           
+  );
+  
+
+  
+  
+  
+  //saves core fields to users table and additional fields to data column, which is later read.
+  $user_fields = user_save(drupal_anonymous_user(),$edit);
+   
+  
+  $uid = $user_fields ->uid;
+  
+  //users_fields get values
+  $fname = $user_fields -> fname[LANGUAGE_NONE][0]['value'];
+  $lname = $user_fields -> lname[LANGUAGE_NONE][0]['value'];
+  $gender = $user_fields -> gender[LANGUAGE_NONE][0]['value'];
+  $birthday = $user_fields -> birthday[LANGUAGE_NONE][0]['value'];
+  $address1 = $user_fields -> address1[LANGUAGE_NONE][0]['value'];
+  $address2 = $user_fields -> address2[LANGUAGE_NONE][0]['value'];
+  $suburb = $user_fields -> suburb[LANGUAGE_NONE][0]['value'];
+  $city = $user_fields -> city[LANGUAGE_NONE][0]['value'];
+  $postcode = $user_fields -> postcode[LANGUAGE_NONE][0]['value'];
+  //by default is New Zealand, still get value for consistency
+  $country = $user_fields -> country[LANGUAGE_NONE][0]['value'];
+  
+  //role assigning, $role = n, where n is the rid from {role} table
+  $string_role = $user_fields -> role[LANGUAGE_NONE][0]['value'];
+  $role = '';
+  if($string_role == 'user'){
+    $role = '5';
+  }else if($string_role =='store'){
+    //user wants to create store account, load store details into db
+    
+    $role = '4';
+    $storename = $user_fields -> storename[LANGUAGE_NONE][0]['value'];
+    $storeurl =  $user_fields -> storeurl[LANGUAGE_NONE][0]['value'];
+    $storedesc = $user_fields -> storedesc[LANGUAGE_NONE][0]['value'];
+    
+    db_insert('users_store')
+    ->fields(array(
+      'uid' => $uid,
+      'storename' => $storename,
+      'storeurl' => $storeurl,
+      'storedesc' => $storedesc,
+    ))
+    ->execute();
+    
+    $domain_edit = array(
+      'subdomain' => $storeurl . '.localhost', //TODO: when site goes live, change to topple.co.nz
+      'sitename' => $storename,
+    );
+    
+    domain_save($domain_edit, array());
+    
+    
+    
+  }
+ 
+
+  //other db inserts
+  
+  db_insert('users_fields')
+  ->fields(array(
+    'uid' => $uid,
+    'fname' => $fname,
+    'lname' => $lname,
+    'gender' => $gender,
+    'birthday' => $birthday,
+    'address1' => $address1,
+    'address2' => $address2,
+    'suburb' => $suburb,
+    'city' => $city,
+    'postcode' => $postcode,
+    'country' => $country,   
+  ))
+  ->execute();
+  
+  
+  db_insert('users_roles')
+  ->fields(array(
+    'uid' => $uid,
+    'rid' => $role,
+  ))
+  ->execute();
+  
+  //logs in the user after registration.
+  $form_state['uid'] = $uid;
+  user_login_submit(array(),$form_state);
+
+}
+

@@ -1,0 +1,11 @@
+; $Id$
+name = ToppleMod
+description = Module for key functionality of the topple website
+package = Topple
+core = 7.x
+files[] = topplemod.module
+dependencies[] = date
+dependencies[] = date_popup
+dependencies[] = fapi_validation
+dependencies[] = domain
+

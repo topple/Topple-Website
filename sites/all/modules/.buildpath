@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<buildpath>
+	<buildpathentry kind="src" path="addressfield"/>
+	<buildpathentry kind="src" path="admin_menu"/>
+	<buildpathentry kind="src" path="async_command"/>
+	<buildpathentry kind="src" path="coder"/>
+	<buildpathentry kind="src" path="ctools"/>
+	<buildpathentry kind="src" path="custom/ajax_example"/>
+	<buildpathentry kind="src" path="custom/topplemod"/>
+	<buildpathentry kind="src" path="date"/>
+	<buildpathentry kind="src" path="devel"/>
+	<buildpathentry kind="src" path="domain"/>
+	<buildpathentry kind="src" path="domain_views"/>
+	<buildpathentry kind="src" path="entity"/>
+	<buildpathentry kind="src" path="pathauto"/>
+	<buildpathentry kind="src" path="rules"/>
+	<buildpathentry kind="src" path="token"/>
+	<buildpathentry kind="src" path="views"/>
+	<buildpathentry kind="src" path="views_bulk_operations"/>
+	<buildpathentry kind="con" path="org.eclipse.php.core.LANGUAGE"/>
+</buildpath>

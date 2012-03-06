@@ -1,0 +1,176 @@
+<?php 
+
+/**
+ * Implements hook_field_schema()
+ * 
+ * Loads fields generated in topplmod to the database on installation.
+ * 
+ */
+
+
+function topplemod_schema() {
+  
+  
+  //create a table for storing user details
+  $schema['users_fields'] = array(
+    'description' => 'Stores Additional fields for {users}',
+    //loads the columns into new table.
+    'fields' => array(
+      
+      'uid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The {users}.uid to store additional fields',
+      ),
+      
+      'fname' => array(
+        'description' => 'The {user} first name.',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => '',
+        'not null' => TRUE,
+      ),
+      
+      'lname' => array(
+        'description' => 'The {user} last name.',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => '',
+        'not null' => TRUE,
+      ),
+      
+      'gender' => array(
+        'description' => 'The {user} gender. values must be either "male" or "female" without quotes ',
+        'type' => 'varchar',
+        'length' => 14,
+        'default' => '',
+        'not null' => TRUE,
+      ),
+     
+      'birthday' => array( 
+        'description' => 'The {user} birthdate.',
+        'type' => 'datetime',
+        'mysql_type' => 'DATETIME',
+        'not null' => TRUE,
+      ),
+      
+        
+      'address1' => array(
+        'description' => 'First part of the {user} address',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,   
+      ),
+      
+      'address2' => array(
+        'description' => 'Second Part of {user} address',
+        'type' => 'varchar',
+        'length' => 255,
+      ),
+      
+      'suburb' => array(
+        'description' => '{User} suburb',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      
+      'city' => array(
+        'description' => '{User} city',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      
+      
+      'postcode' => array(
+        'description' => '{User} postcode',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      
+      'country' => array(
+        'description' => '{User} country, currently NZ only',
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => 'New Zealand',
+        'not null' => TRUE,
+      ),
+    ),
+  
+    'primary key' => array('uid'),
+    //foreign keys not implemented by drupal yet, however
+    //data integrity is important and FK's should be added manually
+    //to the database 
+    'foreign keys' => array(
+      'uid' => array(
+        'table' => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+    ),
+  );//end users_fields table creation
+  
+  //create users_store 
+  $schema['users_store'] = array(
+    'description' => 'Important fields related to a {users} store',
+    //loads the columns into new table.
+    'fields' => array(
+  
+      'uid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The {users}.uid to store additional fields',
+      ),
+          
+      'storename' => array(
+        'description' => 'Name of Store',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE, 
+      ),
+      
+      'storeurl' => array(
+        'description' => 'Store URL',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE, 
+      ),
+      
+      'storedesc' => array(
+        'description' => 'Store Description',
+        'type' => 'varchar',
+        'length' => 350, 
+      ),
+    ),  
+    
+    'primary key' => array('uid'),
+    
+    //make sure duplicate storenames and url's cannot be entered
+    'unique keys' => array(
+      'storename' => array('storename'),
+      'storeurl' => array('storeurl'),
+    ),
+    
+    //foreign keys not implemented by drupal yet, however
+    //data integrity is important and FK's should be added manually
+    //to the database 
+    'foreign keys' => array(
+      'uid' => array(
+        'table' => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+    ),  
+  );
+  
+  
+  
+  return $schema;
+  
+}
+  
+  
