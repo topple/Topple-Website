@@ -5,12 +5,351 @@
  * @file
  * ToppleMod
  * 
- * - A Custom Module to provide key functionality and features to Topple
- * 
- * Contributors: Grant Taylor
- * 
+ * ~ A custom module to provide key functionality and features to Topple. Work in Progress.
+ *  Currently does:
+ *    
+ *    -Custom user registration, validation and submission
+ *    -Saves domain on registration
+ *    -Custom user edit form, validation and submission
+ *    -Exposes store data to views
  * 
  */
+
+
+/**
+ * Registers module with views api
+ */
+function topplemod_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'topplemod') . '/includes/views',
+  );
+}
+
+
+
+/**
+ * Selects existing user info from custom fields, returns an array containing all fields.
+ * 
+ * @param $user 
+ */
+function topplemod_load_user_details($user){
+  
+  $uid = $user -> uid;
+  //checks role then pulls field data from db.
+  if(in_array('Topple Store', $user->roles)){
+    $result = db_query('SELECT a.uid, a.fname,a.lname, a.gender, a.birthday, a.address1, a.address2, a.suburb, a.city, a.postcode, a.country,
+                             b.storename, b.storeurl, b.storedesc
+                      FROM {users_fields} a, {users_store} b 
+                      WHERE a.uid = :uid and b.uid = :uid', array(':uid' => $uid)) ->fetchObject();
+    
+    return $result;
+  }else if(in_array('Topple User', $user->roles)){
+    $result = db_query('SELECT uid, fname,lname, gender, birthday, address1, address2, suburb, city, postcode, country
+                      FROM {users_fields}  
+                      WHERE uid = :uid', array(':uid' => $uid)) ->fetchObject();
+    return $result;
+  }
+}
+
+/**
+ * 
+ * Overrides the user edit form.
+ * @param  $form
+ * @param  $form_state
+ */
+function topplemod_form_user_profile_form_alter(&$form, $form_state){
+  //needed to make use of functions in the domain theme module.
+  module_load_include('inc','domain_theme','domain_theme.admin');
+  global $user;
+  $uid = $user -> uid;
+  
+  //this form only applies store and user accounts
+  if(in_array('administrator', $user->roles)){
+    return $form;
+  }
+  
+  $user_data = topplemod_load_user_details($user);
+  
+  //format the birthday string
+  $temp_birth = strtotime($user_data -> birthday);
+  $birthday = date('d/m/Y', $temp_birth);
+  
+  $form['picture']['#weight'] = '1';
+  $form['picture']['#collapsible'] = TRUE;
+  $form['overlay_control']['#access'] = FALSE;
+  $form['actions']['submit']['#access'] = FALSE;
+  $form['#validate'][] = 'topplemod_user_edit_validation';
+  
+  
+  $form['account']['fname'] = array(
+    '#prefix' => '<p>',
+    '#markup' => '<label>First Name</label>' .  $user_data -> fname ,
+    '#suffix' => '</p>',
+  );
+  
+  $form['account']['lname'] = array(
+    '#prefix' => '<p>',
+    '#markup' => '<label>Last Name</label>' .  $user_data -> lname ,
+    '#suffix' => '</p>',
+  );
+  
+  $form['account']['gender'] = array (
+    '#prefix' => '<p>',
+    '#markup' => '<label>Gender</label>' .  ucfirst($user_data -> gender) ,
+    '#suffix' => '</p>',
+  );
+  
+  $form['account']['birthday'] = array (
+    '#prefix' => '<p>',
+    '#markup' => '<label>Date of Birth</label>' .  $birthday ,
+    '#suffix' => '</p>',
+  );
+  
+  $form['account']['address1'] = array(
+    '#title' => t('Address 1'),
+    '#type' => 'textfield',
+    '#maxlength' => 100,
+    '#description' => t('If you are creating a store account, enter an address associated with your store'),
+    '#default_value' => $user_data -> address1,
+    '#required' => TRUE,
+  );
+  
+  $form['account']['address2'] = array(
+    '#title' => t('Address 2'),
+    '#type' => 'textfield',
+    '#maxlength' => 150,
+    '#default_value' => $user_data -> address2,
+  );
+  
+  
+  $form['account']['suburb'] = array(
+    '#title' => t('Suburb'),
+    '#type' => 'textfield',
+    '#maxlength' => 100,
+    '#default_value' => $user_data -> suburb,
+    '#required' => TRUE,
+  );
+  
+  
+  
+  $form['account']['city'] = array(
+    '#title' => t('City'),
+    '#type' => 'textfield',
+    '#default_value' => $user_data -> city,
+    '#maxlength' => 70,
+    '#required' => TRUE,
+  );
+  
+  
+  $form['account']['postcode'] = array(
+    '#title' => t('Postcode'),
+    '#type' => 'textfield',
+    '#default_value' => $user_data -> postcode,
+    '#maxlength' => 4,
+    '#rules' => array(
+      array('rule' => 'length[4]', 'error' => 'Postcode must be a valid 4 digit number'),
+      array('rule' => 'numeric', 'error' => 'Postcode must be a valid 4 digit number'),
+    ),
+    '#field_suffix' => t('<a href="http://tools.nzpost.co.nz/tools/address-postcode-finder/APLT2008.aspx?from=redirect#post_code_finder" target="_blank">Find your Postcode</a>'),
+  );
+  
+  $form['account']['country'] = array(
+    '#title' => t('Country'),
+    '#type' => 'markup',
+    '#maxlength' => 60,
+    '#description' => t('Sorry, Topple is currently only open to New Zealand Residents'),
+    '#default_value' => t('New Zealand'),
+  );
+  
+  if(in_array('Topple Store', $user->roles)){
+    
+    //sort of hardcoded, need to be changed if role names ever change
+    $form['account']['role'] = array(
+      '#prefix' => '<p>',
+      '#markup' => '<label>Account Type</label>' . 'Topple Store', 
+      '#suffix' => '</p>',
+    );
+  
+    //fieldset to hold store based fields.
+  
+    $form['store'] = array(
+      '#title' => t('Topple Store Account Details'),
+      '#type' => 'fieldset',
+      '#collapsible' => FALSE,
+      '#collapsed' => FALSE,
+      '#states' => array(
+        'visible' => array(
+          ':input[name="role"]' => array('value' => 'store'),
+        ),
+      ),
+    );
+    
+    $form['store']['storename'] = array(
+      '#prefix' => '<p>',
+      '#markup' => '<label>Store Name</label>' .  $user_data -> storename ,
+      '#suffix' => '</p>',
+  
+    );
+  
+    $form['store']['storeurl'] = array(
+      '#prefix' => '<p>',
+      '#markup' => '<label>Store URL</label>' .  $user_data -> storeurl ,
+      '#suffix' => '</p>',
+    );
+    
+    $form['store']['storedesc'] = array(
+      '#title' => t('Store Description'),
+      '#description' => t('A short description of your store, this and additional store details can be changed later in your store options.'),
+      '#type' => 'textarea',
+      '#default_value' => $user_data -> storedesc,
+      '#maxlength' => 300,
+      '#required' => TRUE,
+    );
+
+    
+    //Theme selection for store users
+    
+    
+    $form['store_theme'] = array(
+      '#title' => t('Topple Store Theme Selection'),
+      '#type' => 'fieldset',
+      '#weight' => '2',
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+    );
+
+   
+    $domain_id = db_query('SELECT domain_id 
+                            FROM {users_store}
+                            WHERE uid = :uid' , array(':uid' => $uid)) ->fetchField();
+    
+    $domain =  domain_load($domain_id);
+    
+    //stores domain_id in form_state for submission, saves making a new db call in submit handler
+    $form['domain_id'] = array(
+          '#type' => 'hidden',
+          '#value' => $domain_id,
+    );
+    
+     
+    $header = array(
+      'screenshot' => 'Screenshot',
+      'theme' => 'Theme',
+      
+    );
+    
+    // Get the current theme for this domain,
+    $current_theme = domain_theme_lookup($domain['domain_id']);
+      
+    $themes = system_rebuild_theme_data();
+    $options = array();
+    
+    //build options for the table select
+    foreach($themes as $key => $theme){
+      $options[$key] = array(
+         'screenshot' => theme('image', array('path' => $themes[$key]->info['screenshot'])),   
+         'theme' => '<h3>' . $themes[$key]->info['name'] . ' ' . (isset($themes[$key]->info['version']) ? $themes[$key]->info['version'] : '') . ' ' . '</h3>' . t($themes[$key]->info['description']),         
+      );
+    }
+    
+    $form['store_theme']['themes'] = array(
+      '#type' => 'tableselect',
+      '#header' => $header,
+      '#options' => $options,
+      '#default_value' => ($current_theme == '-1') ? 'bartik' : $current_theme['theme'] ,
+      '#multiple' => FALSE,
+      '#empty' => 'No themes available',
+    );
+      
+  }else if(in_array('Topple User', $user->roles)){
+    //hardcoded, might need revising in future.
+    $form['account']['role'] = array(
+      '#prefix' => '<p>',
+      '#markup' => '<label>Account Type</label>' . 'Topple User', 
+      '#suffix' => '</p>',
+    );   
+       
+  }
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+    '#weight' => '3',
+    '#submit' => array('topplemod_user_edit_submit'),
+  ); 
+   
+  
+  return $form;
+}
+
+
+
+/**
+ * 
+ * Custom validation method for user editing,
+ * currently nothing is complex enough to require this function,
+ * included for future use and standards.
+ * @param $form
+ * @param $form_state
+ */
+function topplemod_user_edit_validation($form, &$form_state){
+  //do nothing
+
+}
+
+
+/**
+ * 
+ * Custom submission method for editing users.
+ * 
+ * @param  $form
+ * @param  $form_state
+ */
+function topplemod_user_edit_submit($form, &$form_state){
+  global $user; 
+   
+  $uid = $user -> uid;
+  $address1 = $form_state['values']['address1'];
+  $address2 = $form_state['values']['address2'];
+  $suburb = $form_state['values']['suburb'];
+  $postcode = $form_state['values']['postcode'];
+  $city = $form_state['values']['city'];
+  
+  
+  if(in_array('Topple Store', $user->roles)){
+    $storedesc = $form_state['values']['storedesc'];
+    $domain_id = $form_state['values']['domain_id'];
+    $theme = $form_state['values']['themes'];
+    
+    db_update('users_store')
+      ->fields(array(
+        'storedesc' => $storedesc,
+      ))
+      ->condition('uid', $uid)
+      ->execute();
+      
+    db_merge('domain_theme')
+      ->key(array('domain_id' => $domain_id))
+      ->fields(array(
+        'theme' => $theme,
+        'status' => 1,
+      ))
+      ->execute();    
+  }
+  
+  db_update('users_fields')
+    ->fields(array(
+      'address1' => $address1,
+      'address2' => $address2,
+      'suburb' => $suburb,
+      'postcode' => $postcode,
+      'city' => $city,
+    ))
+    ->condition('uid', $uid)
+    ->execute();
+    
+    user_profile_form_submit($form, $form_state);
+}
 
 
 /**
@@ -21,10 +360,9 @@
  * @param $form_state 
  */
 function topplemod_form_user_register_form_alter(&$form, $form_state) {
-  
+   
   $date = date('Y-m-d');
   $date_format = 'd/m/Y';
-  
   
   
   // Alters existing registration form and some fields within
@@ -33,16 +371,13 @@ function topplemod_form_user_register_form_alter(&$form, $form_state) {
   $form['account']['#weight'] = '0';
   $form['account']['name']['#weight'] = '0';
   
-  $form['account']['domain_user']['#access'] = TRUE;
-  
   $form['actions']['submit']['#access'] = FALSE;
-  $form['#validate'][] = 'topplemod_user_validation';
+  $form['#validate'][] = 'topplemod_user_register_validation';
       
   
   $form['account']['fname'] = array(
     '#title' => t('First Name'),
     '#type' => 'textfield',
-    '#default_value' => empty($form_state['values']['account']['fname']) ? '' : $form_state['values']['account']['fname'],
     '#maxlength' => 40,
     '#required' => TRUE,
   );
@@ -168,7 +503,7 @@ function topplemod_form_user_register_form_alter(&$form, $form_state) {
     '#description' => t('The name of your Topple Store, e.g. Fancy Fishing Gear '),
     '#type' => 'textfield',
     '#default_value' => '',
-    '#maxlength' => 100,
+    '#maxlength' => 79,
     '#states' => array(
       'required' => array(
         ':input[name="role"]' => array('value' => 'store'),
@@ -211,44 +546,27 @@ function topplemod_form_user_register_form_alter(&$form, $form_state) {
    $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Create New Account'),
-    '#submit' => array('topplemod_user_submit'),
-  );
-  
-  
+    '#submit' => array('topplemod_user_register_submit'),
+  ); 
+
   return $form; 
 }
 
 
 /**
- * Custom validation method.
+ * Custom user registration validation method.
  * 
- * validates:
- *  -postcode
- *  -birthday no one under 18 -TODO: tweak it to make it perfect...
  *
  * @param $form
  * @param $form_state
  */
-function topplemod_user_validation($form, &$form_state){
-  
-  
-  drupal_set_message('custom validation firing','warning');
-  
+function topplemod_user_register_validation($form, &$form_state){
+   
   //store fields are only required if user picks store, so we must implement custom "required" validation for these fields.
   if($form_state['values']['role'] == 'store' ){
     if(trim($form_state['values']['storename']) == ''){
-      form_set_error('Store Name', 'Store Name is required');
-    
-    }elseif((bool)db_select('users_store')
-              ->fields('users_store',array('storename'))
-              ->condition('storename', db_like($form_state['values']['storename']),'LIKE')
-              ->range(0,1)
-              ->execute()
-              ->fetchField()){//checks store name is not already in use
-   
-      form_set_error('Store Name', t('The Store Name %storename is already taken.', array('%storename' => $form_state['values']['storename'])));
+      form_set_error('Store Name', 'Store Name is required');             
     }
-    
     if(trim($form_state['values']['storeurl']) == ''){
       form_set_error('Store URL', 'Store URL is required');
     }
@@ -256,18 +574,46 @@ function topplemod_user_validation($form, &$form_state){
       form_set_error('Store Description', 'Store Description is required');
     }
     
+    $storeurl = $form_state['values']['storeurl'] . '.topple.co.nz';
+
+         if(((bool)db_select('users_store')
+              ->fields('users_store',array('storeurl'))
+              ->condition('storeurl', db_like($storeurl),'LIKE')
+              ->range(0,1)
+              ->execute()
+              ->fetchField()) or
+              
+              ((bool)db_select('domain')
+              ->fields('domain',array('subdomain'))
+              ->condition('subdomain', db_like($storeurl),'LIKE')
+              ->range(0,1)
+              ->execute()
+              ->fetchField())){
+                form_set_error('Store URL', t('The Store URL %storeurl is already taken.', array('%storeurl' => $storeurl)));
+           }
+
+    if((bool)db_select('users_store')
+              ->fields('users_store',array('storename'))
+              ->condition('storename', db_like($form_state['values']['storename']),'LIKE')
+              ->range(0,1)
+              ->execute()
+              ->fetchField()) {
+                form_set_error('Store Name', t('The Store Name %storename is already taken.', array('%storename' => $form_state['values']['storename'])));
+     }
   }
-    
+   
+  //this is not explicitly required due to a read only field, however dom manipulation can change field value, so it's safe to check anyways
+  if($form_state['values']['country'] != 'New Zealand'){
+    form_set_error('Country', 'Topple is currently only available to residents of New Zealand');
+  }
+  
+  
   
   //birthday validation, checks user is 18 or older
   $birthday = $form_state['values']['birthday'];
-  drupal_set_message($birthday,'warning');
-  
-  drupal_set_message(gettype($form_state['values']['birthday']),'warning');
-  
-  dpm($form_state);
+ 
+  //dpm($form_state);
   if(gettype($form_state['values']['birthday'])!='array'){ 
-      drupal_set_message('after','warning');
 
     list($Y,$m,$d) = explode("-",$birthday);
     $years = date("Y") - $Y;  
@@ -280,9 +626,6 @@ function topplemod_user_validation($form, &$form_state){
     
   }
   
-  
- 
-  
 }
 
 /**
@@ -291,7 +634,7 @@ function topplemod_user_validation($form, &$form_state){
  * @param $form
  * @param $form_state
  */
-function topplemod_user_submit($form, &$form_state){
+function topplemod_user_register_submit($form, &$form_state){
   
   //timezone used to display page
   $timezone = date_default_timezone_get();
@@ -343,9 +686,6 @@ function topplemod_user_submit($form, &$form_state){
             $form_state['values']['storedesc']))),           
   );
   
-
-  
-  
   
   //saves core fields to users table and additional fields to data column, which is later read.
   $user_fields = user_save(drupal_anonymous_user(),$edit);
@@ -373,62 +713,84 @@ function topplemod_user_submit($form, &$form_state){
     $role = '5';
   }else if($string_role =='store'){
     //user wants to create store account, load store details into db
-    
     $role = '4';
-    $storename = $user_fields -> storename[LANGUAGE_NONE][0]['value'];
-    $storeurl =  $user_fields -> storeurl[LANGUAGE_NONE][0]['value'];
-    $storedesc = $user_fields -> storedesc[LANGUAGE_NONE][0]['value'];
-    
-    db_insert('users_store')
+  }
+  //series of important DB entries, txn is used to maintain data integrity should an issue arise.
+  $txn = db_transaction();
+  try{  
+    db_insert('users_fields')
     ->fields(array(
       'uid' => $uid,
-      'storename' => $storename,
-      'storeurl' => $storeurl,
-      'storedesc' => $storedesc,
-    ))
+      'fname' => $fname,
+      'lname' => $lname,
+      'gender' => $gender,
+      'birthday' => $birthday,
+      'address1' => $address1,
+      'address2' => $address2,
+      'suburb' => $suburb,
+      'city' => $city,
+      'postcode' => $postcode,
+      'country' => $country,   
+     ))
     ->execute();
+  
+    db_insert('users_roles')
+    ->fields(array(
+      'uid' => $uid,
+      'rid' => $role,
+    ))
+    ->execute();  
+  
+  
+    //store specific inserts.
+    if($string_role == 'store'){
+        
+      $storename = $user_fields -> storename[LANGUAGE_NONE][0]['value'];
+      $storeurl =  $user_fields -> storeurl[LANGUAGE_NONE][0]['value'];
+      $storedesc = $user_fields -> storedesc[LANGUAGE_NONE][0]['value'];
+      
+      $storeurl = $storeurl . '.topple.co.nz'; //appends full domain name to db record.    
+      
     
-    $domain_edit = array(
-      'subdomain' => $storeurl . '.localhost', //TODO: when site goes live, change to topple.co.nz
+      $domain_edit = array(
+      'subdomain' => $storeurl,
       'sitename' => $storename,
-    );
+      'scheme' => 'https',
+      );
     
-    domain_save($domain_edit, array());
-    
-    
-    
-  }
- 
+      $domain = domain_save($domain_edit, array()); 
+      
+      $domain_id = $domain['domain_id'];   
+       
+      db_insert('users_store')
+      ->fields(array(
+        'uid' => $uid,
+        'domain_id' => $domain_id,
+        'storename' => $storename,
+        'storeurl' => $storeurl,
+        'storedesc' => $storedesc,
+      ))
+      ->execute();
+      
+      
+      //@TODO: hardcoded for now, need to change when themes get implemented
+      db_insert('domain_theme')
+      ->fields(array(
+        'domain_id' => $domain_id,
+        'theme' => 'bartik',
+      ))
+      ->execute();
+    }
+      
+    //logs in the user after registration.
+    $form_state['uid'] = $uid;
+    user_login_submit(array(),$form_state);
 
-  //other db inserts
-  
-  db_insert('users_fields')
-  ->fields(array(
-    'uid' => $uid,
-    'fname' => $fname,
-    'lname' => $lname,
-    'gender' => $gender,
-    'birthday' => $birthday,
-    'address1' => $address1,
-    'address2' => $address2,
-    'suburb' => $suburb,
-    'city' => $city,
-    'postcode' => $postcode,
-    'country' => $country,   
-  ))
-  ->execute();
-  
-  
-  db_insert('users_roles')
-  ->fields(array(
-    'uid' => $uid,
-    'rid' => $role,
-  ))
-  ->execute();
-  
-  //logs in the user after registration.
-  $form_state['uid'] = $uid;
-  user_login_submit(array(),$form_state);
-
+  }catch (Exception $e){
+    //roll back transaction, data integrity!
+    $txn->rollback();
+    //print to drupal log 
+    watchdog_exception('type', $e);
+  } 
 }
 

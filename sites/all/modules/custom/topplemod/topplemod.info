@@ -8,4 +8,6 @@ dependencies[] = date
 dependencies[] = date_popup
 dependencies[] = fapi_validation
 dependencies[] = domain
+dependencies[] = domain_theme
+dependencies[] = views
 

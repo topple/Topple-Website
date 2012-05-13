@@ -249,7 +249,9 @@ class DrupalDefaultEntityController implements DrupalEntityControllerInterface {
    * @return SelectQuery
    *   A SelectQuery object for loading the entity.
    */
+
   protected function buildQuery($ids, $conditions = array(), $revision_id = FALSE) {
+    
     $query = db_select($this->entityInfo['base table'], 'base');
 
     $query->addTag($this->entityType . '_load_multiple');
@@ -291,8 +293,10 @@ class DrupalDefaultEntityController implements DrupalEntityControllerInterface {
         $query->condition('base.' . $field, $value);
       }
     }
+    
     return $query;
   }
+  
 
   /**
    * Attaches data to entities upon loading.

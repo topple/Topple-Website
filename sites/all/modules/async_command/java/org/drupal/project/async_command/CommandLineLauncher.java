@@ -2,7 +2,7 @@ package org.drupal.project.async_command;
 
 import org.apache.commons.cli.*;
 import org.drupal.project.async_command.exception.ConfigLoadingException;
-import org.drupal.project.async_command.exception.DrupalAppException;
+import org.drupal.project.async_command.exception.DrupletException;
 
 import java.io.File;
 import java.lang.reflect.Constructor;
@@ -10,28 +10,28 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.logging.Logger;
 
 /**
- * This handler deals with CommandLineInterface launching DrupalApps.
+ * This handler deals with CommandLineInterface launching Druplets.
  * Different launchers (CLI, web, etc) have different interfaces.
  */
 public class CommandLineLauncher {
 
-    private static Logger logger = DrupalUtils.getPackageLogger();
+    private static Logger logger = DrupletUtils.getPackageLogger();
 
-    private Class drupalAppClass;
-    private GenericDrupalApp drupalApp;
+    private Class drupletClass;
+    private Druplet druplet;
     private File configFile;
     // this is the default running mode.
-    private GenericDrupalApp.RunningMode runningMode;
+    private Druplet.RunningMode runningMode;
     private boolean debugMode = false;
 
     /**
-     * Initialize the launcher with a DrupalApp class.
+     * Initialize the launcher with a druplet class.
      *
-     * @param drupalAppClass
+     * @param drupletClass
      */
-    public CommandLineLauncher(Class<? extends GenericDrupalApp> drupalAppClass) {
-        // assert GenericDrupalApp.class.isAssignableFrom(drupalAppClass);
-        this.drupalAppClass = drupalAppClass;
+    public CommandLineLauncher(Class<? extends Druplet> drupletClass) {
+        // assert Druplet.class.isAssignableFrom(drupletClass);
+        this.drupletClass = drupletClass;
     }
 
 
@@ -41,7 +41,10 @@ public class CommandLineLauncher {
      * @param args arguments from main()
      */
     public void launch(String[] args) {
-        logger.info("DrupalApp VERSION: " + DrupalUtils.VERSION);
+        logger.info("Druplet VERSION: " + DrupletUtils.VERSION);
+        if (!DrupletUtils.checkJavaVersion()) {
+            logger.warning("Please install Java 1.6 or greater version. Your Java version is " + System.getProperty("java.version"));
+        }
 
         // build command parser
         Options options = buildOptions();
@@ -57,8 +60,8 @@ public class CommandLineLauncher {
         try {
             // get configurable settings. non-exclusive.
             handleSettings(shellCommand);
-            // construct drupal app
-            constructDrupalApp();
+            // construct druplet object
+            constructDruplet();
             // handle executable options, mutual exclusive
             handleExecutables(shellCommand);
             logger.info("Mission accomplished.");
@@ -76,30 +79,32 @@ public class CommandLineLauncher {
         if (command.hasOption('h')) {
             // print help message and exit.
             HelpFormatter formatter = new HelpFormatter();
-            formatter.printHelp("Drupal application -- " + drupalApp.getIdentifier(), buildOptions());
+            formatter.printHelp("Druplet -- " + druplet.getIdentifier(), buildOptions());
         }
         else if (command.hasOption('t')) {
             // test connection and exit.
-            drupalApp.getDrupalConnection().connect();
-            drupalApp.getDrupalConnection().testConnection();
+            druplet.getDrupalConnection().connect();
+            druplet.getDrupalConnection().testConnection();
         }
         else if (command.hasOption('e')) {
-            // run command directly and exit.
-//            initDrupalConnection();
-//            prepareApp();
-//            String evalStr = command.getOptionValue('e');
-//            try {
-//                Result result = runCommand(evalStr);
-//                String successMsg = result.getStatus() ? "succeeds" : "fails";
-//                logger.info("Running " + successMsg + ". Message: " + result.getMessage());
-//            } catch (EvaluationFailureException e) {
-//                logger.severe("Cannot evaluate script from command line.");
-//                throw new DrupalAppException(e);
-//            }
+            // first create an command using Drush (which means it can only work locally), and then run the app using ONCE running mode.
+            String[] args = command.getArgs();
+            String options = "control=ONCE";
+            if (args.length < 2 || args.length > 3) {
+                logger.severe("You need to have at least 2 parameters for evaluation. Please see drush help async-command.");
+                return;
+            } else if (args.length == 2) {
+                // options remain the same.
+            } else if (args.length == 3) {
+                options = args[2] + "|" + options;
+            }
+            DrupletUtils.executeDrush("async-command", druplet.getIdentifier(), args[0], args[1], options); // app, command, description, options.
+            druplet.setRunningMode(Druplet.RunningMode.ONCE);
+            druplet.run();
         }
         else {
             // run the application command by command. could be time-consuming
-            drupalApp.run();
+            druplet.run();
         }
     }
 
@@ -120,12 +125,12 @@ public class CommandLineLauncher {
         if (shellCommand.hasOption('r')) {
             String rm = shellCommand.getOptionValue('r');
             try {
-                runningMode = GenericDrupalApp.RunningMode.valueOf(rm.toUpperCase());
+                runningMode = Druplet.RunningMode.valueOf(rm.toUpperCase());
             } catch (Exception e) {
                 throw new ConfigLoadingException("Cannot recognize running mode. Use -h to see the options available", e);
             }
         } else {
-            runningMode = GenericDrupalApp.RunningMode.SERIAL;
+            runningMode = Druplet.RunningMode.SERIAL;
         }
 
         if (shellCommand.hasOption('d')) {
@@ -135,27 +140,27 @@ public class CommandLineLauncher {
         }
     }
 
-    private void constructDrupalApp() {
-        DrupalConnection drupalConnection;
+    private void constructDruplet() {
+        DrupletConfig drupletConfig;
         if (configFile != null && configFile.exists()) {
-            drupalConnection = new DrupalConnection(configFile);
+            drupletConfig = new DrupletConfig(configFile);
         } else {
-            drupalConnection = DrupalConnection.create();
+            drupletConfig = DrupletConfig.load();
         }
 
         try {
-            Constructor<GenericDrupalApp> constructor = drupalAppClass.getConstructor(DrupalConnection.class);
-            drupalApp = constructor.newInstance(drupalConnection);
+            Constructor<Druplet> constructor = drupletClass.getConstructor(DrupletConfig.class);
+            druplet = constructor.newInstance(drupletConfig);
         } catch (NoSuchMethodException e) {
-            throw new DrupalAppException(e);
+            throw new DrupletException(e);
         } catch (InvocationTargetException e) {
-            throw new DrupalAppException(e);
+            throw new DrupletException(e);
         } catch (InstantiationException e) {
-            throw new DrupalAppException(e);
+            throw new DrupletException(e);
         } catch (IllegalAccessException e) {
-            throw new DrupalAppException(e);
+            throw new DrupletException(e);
         }
-        drupalApp.setRunningMode(runningMode);
+        druplet.setRunningMode(runningMode);
     }
 
 
@@ -169,7 +174,8 @@ public class CommandLineLauncher {
         options.addOption("d", "debug", false, "enable debug mode");
         options.addOption("h", "help", false, "print this message");
         options.addOption("t", "test", false, "test connection to Drupal database");
-        options.addOption("e", "eval", true, "evaluate a command call directly for this DrupalApp");
+        options.addOption("e", "eval", false, "evaluate a command call directly for this Druplet. eg., -e app command description options");
+
         return options;
     }
 

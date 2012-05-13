@@ -164,6 +164,36 @@ function async_command_views_data() {
       ),
     ),
 
+    'id3' => array(
+      'title' => t('Parameter id3'),
+      'help' => t('Parameter id3'),
+      'field' => array(
+        'handler' => 'views_handler_field',
+        'click sortable' => TRUE,
+      ),
+      'sort' => array(
+        'handler' => 'views_handler_sort',
+      ),
+      'filter' => array(
+        'handler' => 'views_handler_filter_numeric',
+      ),
+    ),
+
+    'id4' => array(
+      'title' => t('Parameter id4'),
+      'help' => t('Parameter id4'),
+      'field' => array(
+        'handler' => 'views_handler_field',
+        'click sortable' => TRUE,
+      ),
+      'sort' => array(
+        'handler' => 'views_handler_sort',
+      ),
+      'filter' => array(
+        'handler' => 'views_handler_filter_numeric',
+      ),
+    ),
+
     'number1' => array(
       'title' => t('Parameter number1'),
       'help' => t('Parameter number1'),
@@ -254,6 +284,36 @@ function async_command_views_data() {
       ),
     ),
 
+    'string3' => array(
+      'title' => t('Parameter string3'),
+      'help' => t('Parameter string3'),
+      'field' => array(
+        'handler' => 'views_handler_field',
+        'click sortable' => TRUE,
+      ),
+      'sort' => array(
+        'handler' => 'views_handler_sort',
+      ),
+      'filter' => array(
+        'handler' => 'views_handler_filter_string',
+      ),
+    ),
+
+    'string4' => array(
+      'title' => t('Parameter string4'),
+      'help' => t('Parameter string4'),
+      'field' => array(
+        'handler' => 'views_handler_field',
+        'click sortable' => TRUE,
+      ),
+      'sort' => array(
+        'handler' => 'views_handler_sort',
+      ),
+      'filter' => array(
+        'handler' => 'views_handler_filter_string',
+      ),
+    ),
+
     /*'dependency' => array(
       'title' => t('Dependency ID'),
       'help' => t('Dependent command ID, which should be executed before this command.'),
@@ -269,19 +329,18 @@ function async_command_views_data() {
       ),
     ),*/
 
-    // TODO: should show readable string rather than a 4-char code.
     'status' => array(
       'title' => t('Status'),
       'help' => t('Status of the command execution.'),
       'field' => array(
-        'handler' => 'views_handler_field',
+        'handler' => 'views_handler_field_async_command_status',
         'click sortable' => TRUE,
       ),
       'sort' => array(
         'handler' => 'views_handler_sort',
       ),
       'filter' => array(
-        'handler' => 'views_handler_filter_string',
+        'handler' => 'views_handler_filter_async_command_status',
       ),
     ),
 
@@ -290,14 +349,14 @@ function async_command_views_data() {
       'title' => t('Control'),
       'help' => t('Control instructions of the command execution.'),
       'field' => array(
-        'handler' => 'views_handler_field',
+        'handler' => 'views_handler_field_async_command_control',
         'click sortable' => TRUE,
       ),
       'sort' => array(
         'handler' => 'views_handler_sort',
       ),
       'filter' => array(
-        'handler' => 'views_handler_filter_string',
+        'handler' => 'views_handler_filter_async_command_control',
       ),
     ),
 
@@ -391,4 +450,63 @@ function async_command_views_data() {
 
   );
   return $data;
+}
+
+function _async_command_status_code() {
+  return array(
+    'OKOK' => t('Success'),
+    'FAIL' => t('Failure'),
+    'RUNN' => t('Running'),
+    'STOP' => t('Forced stop'),
+    'NREC' => t('Unrecognized command'),
+    'PEND' => t('Pending'),
+    'INTR' => t('Internal error'),
+  );
+}
+
+function _async_command_control_code() {
+  return array(
+    'ONCE' => t('Run once'),
+    'CNCL' => t('Cancel'),
+    'TRAN' => t('Transfer'),
+  );
+}
+
+
+class views_handler_field_async_command_status extends views_handler_field {
+  function render($values) {
+    $value = $this->get_value($values);
+    $status_code = _async_command_status_code();
+    return isset($status_code[$value]) ? $status_code[$value] : $value;
+  }
+}
+
+
+class views_handler_filter_async_command_status extends views_handler_filter_in_operator {
+  function get_value_options() {
+    if (isset($this->value_options)) {
+      return;
+    }
+    $this->value_options = _async_command_status_code();
+    // TODO: should allow filter for any arbitrary string.
+  }
+}
+
+class views_handler_field_async_command_control extends views_handler_field {
+  function render($values) {
+    $value = $this->get_value($values);
+    $control_code = _async_command_control_code();
+    return isset($control_code[$value]) ? $control_code[$value] : $value;
+  }
+}
+
+
+class views_handler_filter_async_command_control extends views_handler_filter_in_operator {
+  function get_value_options() {
+    if (isset($this->value_options)) {
+      return;
+    }
+    $this->value_options = _async_command_status_control();
+    // TODO: should allow filter for any arbitrary string.
+  }
 }

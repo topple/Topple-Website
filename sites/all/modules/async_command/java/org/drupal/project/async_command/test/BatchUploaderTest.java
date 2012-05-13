@@ -2,7 +2,8 @@ package org.drupal.project.async_command.test;
 
 import org.drupal.project.async_command.BatchUploader;
 import org.drupal.project.async_command.DrupalConnection;
-import org.drupal.project.async_command.DrupalUtils;
+import org.drupal.project.async_command.DrupletConfig;
+import org.drupal.project.async_command.DrupletUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,7 +19,7 @@ public class BatchUploaderTest {
 
     @Before
     public void setUp() throws Exception {
-        drupalConnection = DrupalConnection.create();
+        drupalConnection = new DrupalConnection(DrupletConfig.load());
         drupalConnection.connect();
         try {
             drupalConnection.update("CREATE TABLE {async_command_batch_updater} (id INT(10) NOT NULL)");
@@ -39,9 +40,9 @@ public class BatchUploaderTest {
         System.out.println("Finished adding data to database.");
         up.join();
         System.out.println("Finished uploading.");
-        long n1 = DrupalUtils.getLong(drupalConnection.queryValue("SELECT count(*) FROM {async_command_batch_updater}"));
+        long n1 = DrupletUtils.getLong(drupalConnection.queryValue("SELECT count(*) FROM {async_command_batch_updater}"));
         assertEquals(100L, n1);
-        long n2 = DrupalUtils.getLong(drupalConnection.queryValue("SELECT count(*) FROM {async_command_batch_updater} WHERE id < 50"));
+        long n2 = DrupletUtils.getLong(drupalConnection.queryValue("SELECT count(*) FROM {async_command_batch_updater} WHERE id < 50"));
         assertEquals(50L, n2);
     }
 

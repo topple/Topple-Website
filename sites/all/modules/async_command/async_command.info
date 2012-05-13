@@ -11,9 +11,9 @@ files[] = async_command.views_default.inc
 
 ; it doesn't require views, but it's plus.
 ; dependencies[] = views
-; Information added by drupal.org packaging script on 2011-11-22
-version = "7.x-2.0-alpha6"
+; Information added by drupal.org packaging script on 2012-03-09
+version = "7.x-2.0-alpha10"
 core = "7.x"
 project = "async_command"
-datestamp = "1321929937"
+datestamp = "1331254838"
 

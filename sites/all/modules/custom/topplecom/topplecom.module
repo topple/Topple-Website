@@ -1,0 +1,379 @@
+<?php
+
+
+/**
+ * Topple Commerce 
+ * 
+ * 
+ */
+
+
+
+
+/**
+ * Includes section.
+ */
+
+
+/**
+ * Registers module with views api
+ */
+function topplecom_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'topplecom') . '/includes/views',
+  );
+}
+
+
+/**
+ * 
+ * Registers forms to the menu, future changes required.
+ */
+function topplecom_menu(){
+  $items['topplecom/%ctools_js/product_creation'] = array(
+    'title' => 'Create Topple Product',
+    'page callback' => 'topplecom_product_create_callback',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  
+  $items['topplecom/product_edit'] = array(
+    'title' => 'View Topple Products by User ID',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('topplecom_product_view'),
+    'access callback' => TRUE,
+  );
+  
+  $items['skuform'] = array(
+    'title' => 'SKU Form',
+    'page callback' => 'topplecom_get_sku_form',
+    'page arguments' => array('topplecom_skuform'),
+    'access callback' => TRUE,
+    
+  );
+  
+  return $items;
+}
+
+function topplecom_get_sku_form($form_id) {
+  $form_state = array();
+  $form = drupal_build_form($form_id, $form_state);
+  echo drupal_render($form); 
+}
+
+
+/**
+ * 
+ * Returns an associative array of taxonomy terms for the given machine name and parent.
+ * See drupal api for taxonomy_get_tree for more info.
+ * 
+ * @param  $machine_name
+ * @param  $parent_id
+ */
+function topplecom_get_categories($machine_name, $parent_id){
+  if (is_null($parent_id)){
+    return array();
+  }
+  $v = taxonomy_vocabulary_machine_name_load($machine_name);
+  $terms = taxonomy_get_tree($v->vid, $parent_id, 1);
+  foreach ($terms as $term){
+    $options[$term->tid] = $term->name;
+  }
+  return $options;
+}
+
+
+/**
+ * 
+ * Page one of the product creation form, uses ajax and object caching. 
+ * 
+ * @param unknown_type $form
+ * @param unknown_type $form_state
+ */
+function topplecom_product_create_step_1($form, &$form_state){
+  
+  //Checks if options are stored in cache from previous manipulation.
+  $category = isset($form_state['object']['category']) ? $form_state['object']['category'] : '';
+  $sub_category = isset($form_state['object']['sub_category']) ? $form_state['object']['sub_category'] : '';
+  
+  $form['category_fieldset'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Category',
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,    
+  );
+
+  
+  $form['subcategory_fieldset'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Subcategory',
+    '#prefix' => '<div id = "topplecom_sub_category">',
+    '#suffix' => '</div>',
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,    
+  );
+  
+  $category_options = topplecom_get_categories('store_category', 0);
+  
+  $form['category_fieldset']['category'] = array(
+    '#type' => 'select',
+    '#title' => 'Category',
+    '#size'=> 10,
+    '#default_value' => $category,
+    '#options' => $category_options,
+    '#ajax' => array(
+      'event' => 'change',
+      'callback' => 'topplecom_ajax_category_callback',
+      'wrapper' => 'topplecom_sub_category',
+      'effect' => 'fade',
+    ),
+  );
+  
+  if(isset($form_state['values']['category']) || isset($form_state['object']['sub_category'])){
+    $form['subcategory_fieldset']['sub_category'] = array(
+      '#type' => 'select',
+      
+      '#default_value' => $sub_category, 
+     
+      '#title' => 'Sub Category',
+      '#options' => isset($form_state['values']['category']) ? topplecom_get_categories('store_category', $form_state['values']['category']) : topplecom_get_categories('store_category', $form_state['object']['category']),
+    ); 
+  }
+  
+  return $form;
+}
+
+/**
+ * 
+ * Page 2 of the product creation form, uses ajax and object caching. 
+ * @param $form
+ * @param $form_state
+ */
+function topplecom_product_create_step_2($form, &$form_state){
+  
+ 
+  drupal_add_library('system', 'ui.tabs');
+  drupal_add_js('jQuery(document).ready(function(){
+  
+  (function ($) {
+  
+  var tab_counter = 2;
+  
+  var $tabs = $("#tabs").tabs({
+      add: function( event, ui ) {
+       var tab_content = "Tab " + tab_counter + " content.";
+       $( ui.panel ).append( "<p>" + tab_content + "</p>" );
+       $("#tabs").tabs("option", "selected", tab_counter); 
+      },
+      
+      select: function(event, ui) {
+        if(ui.panel.id == "create-product-tab"){
+            
+          addTab();
+          return false;
+         
+        }
+      
+      },
+      
+      ajaxOptions: {
+        error: function(xhr, status, index, anchor){
+          $(anchor.hash).html( "Status: " + status + " Index: " + index + " xhr: " + xhr + " anchor: " + anchor);
+        }  
+      },
+      
+      selected: -1,
+      collapsible: true,
+      cache: true,
+      
+      
+      
+    });
+    
+
+  // actual addTab function: adds new tab using the title input from the form above
+  function addTab() {
+    var tab_title = "Tab " + tab_counter;
+    $tabs.tabs( "add", "/skuform", tab_title );
+    tab_counter++;
+   
+  }
+  
+  }(jQuery));
+
+  });', 'inline');
+  
+  $category_options = topplecom_get_categories('store_category', 0);
+  $sub_category_options = topplecom_get_categories('store_category', $form_state['object']['category']);
+  $category = $category_options[$form_state['object']['category']];
+  $sub_category = $sub_category_options[$form_state['object']['sub_category']];
+  
+  $form['info'] = array(
+    '#markup' => t('You are creating a product belonging to <strong> @sub_category </strong> of the <strong> @category </strong> category', array( '@sub_category' => $sub_category, '@category' => $category)),
+  );
+  
+  $form['help'] = array(
+    '#markup' => '<div id = "topplecom_product_create_help"> On Topple, a Product is made up of 1 or more SKUs, a good of example of this is a plain white shirt which comes in 3 sizes, each size is represent by a SKU,
+                      In this section you enter in the title and description of your product then have the choice to create one or more skus with varying attributes to link to this product </div>',        
+  );
+  
+  $form['product_name'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Product Name',
+    '#required' => TRUE,
+  );
+  
+  $form['product_description'] = array(
+    '#type' => 'text_format',
+    '#title' => 'Product Description',
+    '#required' => TRUE,
+  );
+  
+  
+  $form["sku_fieldset"] = array ();
+  
+  
+  $form['table'] = array(
+    '#markup' =>'
+    
+      <div id="tabs">
+        <ul>
+            <li><a href="#create-product-tab">Create Product</a></li>
+            <li><a href="/skuform">Tab 1</a></li>
+
+        </ul>
+        <div id="create-product-tab">
+            <p>Proin elit arcu, rutrum commodo, vehicula tempus, commodo a, risus. Curabitur nec arcu. Donec sollicitudin mi sit amet mauris. Nam elementum quam ullamcorper ante. Etiam aliquet massa et lorem. Mauris dapibus lacus auctor risus. Aenean tempor ullamcorper leo. Vivamus sed magna quis ligula eleifend adipiscing. Duis orci. Aliquam sodales tortor vitae ipsum. Aliquam nulla. Duis aliquam molestie erat. Ut et mauris vel pede varius sollicitudin. Sed ut dolor nec orci tincidunt interdum. Phasellus ipsum. Nunc tristique tempus lectus.</p>
+        </div>
+      </div>',
+  );
+  
+  
+  $form['sku'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Linked SKUs',
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,    
+  );
+  
+  
+  
+  return $form;
+}
+
+
+/**
+ * The form which gets loaded in jquery tabs on. Made for creating individual sku's
+ * 
+ * @param  $form
+ * @param  $form_state
+ */
+function topplecom_skuform($form, &$form_state){
+  
+  $form['test'] = array(
+    '#type' => 'textfield',
+    '#title' => t('working!'),
+    
+  );
+  
+  
+  return $form;
+  
+}
+
+
+
+
+
+/**
+ * 
+ * Enter description here ...
+ * @param $form
+ * @param $form_state
+ */
+function topplecom_ajax_category_callback($form, $form_state){
+  
+  return $form['subcategory_fieldset'];
+}
+
+
+function topplecom_product_create_callback($js = NULL, $step = NULL){
+  
+  $form_info = array(
+    'id' => 'topplecom-product-create-form',
+    'path' => "topplecom/" . ($js ? 'ajax' : 'nojs') . "/product_creation/%step",
+    'show trail' => TRUE,
+    'show back' => TRUE,
+    'show cancel' => TRUE,
+    'show return' => FALSE,
+    'next callback' => 'topplecom_product_create_next',
+    'finish callback' => 'topplecom_product_create_finish',
+    'cancel callback' => 'topplecom_product_create_cancel',
+    'order' => array(
+      'step1' => 'Select Category',
+      'step2' => 'Create Product',
+    ),
+    'forms' => array(
+      'step1' => array('form id' => 'topplecom_product_create_step_1'),
+      'step2' => array('form id' => 'topplecom_product_create_step_2'),
+    ),
+  );
+  
+  //Handles object Caching
+  
+  $object_id = 'topplecom_product_create';
+  if (empty($step)){
+    topplecom_product_create_cache_clear($object_id);
+  }
+  
+  $object = topplecom_product_create_cache_get($object_id);
+  $form_state = array(
+    'ajax' => $js,
+    'object_id' => $object_id,
+    'object' => &$object,
+  );
+  
+  
+  ctools_include('wizard');
+  $form = ctools_wizard_multistep_form($form_info, $step, $form_state);
+  $output = drupal_render($form);
+   
+  return $output;
+}
+
+
+function topplecom_product_create_cache_set($id, $object){
+  ctools_include('object-cache');
+  ctools_object_cache_set('', $id, $object);
+}
+
+function topplecom_product_create_cache_get($id){
+  ctools_include('object-cache');
+  return ctools_object_cache_get('', $id);
+}
+
+function topplecom_product_create_cache_clear($id){
+ ctools_include('object-cache');
+ ctools_object_cache_clear('', $id); 
+}
+
+function topplecom_product_create_next(&$form_state){
+  
+  $old = topplecom_product_create_cache_get($form_state['object_id']);
+  
+  $old = isset($old) ? $old : array();
+  
+  $form_state['object'] = $form_state['values']+$old;
+    
+  topplecom_product_create_cache_set($form_state['object_id'], $form_state['object']);
+}
+
+
+
+
+
+
+
+

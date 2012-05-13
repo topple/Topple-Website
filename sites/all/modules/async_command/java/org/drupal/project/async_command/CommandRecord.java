@@ -9,7 +9,7 @@ import java.util.logging.Logger;
 
 /**
  * Database record for this AsyncCommand.
- * This is the "boundary object" between AsyncCommand and DrupalApp, where DrupalApp knows how to transfer data into the AsyncCommand,
+ * This is the "boundary object" between AsyncCommand and Druplet, where Druplet knows how to transfer data into the AsyncCommand,
  * And AsyncCommand only cares about the program logic.
  */
 public class CommandRecord implements Comparable<CommandRecord> {
@@ -28,12 +28,16 @@ public class CommandRecord implements Comparable<CommandRecord> {
     private byte[] output;
     private Long id1;
     private Long id2;
+    private Long id3;
+    private Long id4;
     private Float number1;
     private Float number2;
     private Float number3;
     private Float number4;
     private String string1;
     private String string2;
+    private String string3;
+    private String string4;
 
     // these are status/control parameters.
     private String status;
@@ -48,7 +52,7 @@ public class CommandRecord implements Comparable<CommandRecord> {
     // other useful variables
     private final DrupalConnection drupalConnection;
 
-    protected static Logger logger = DrupalUtils.getPackageLogger();
+    protected static Logger logger = DrupletUtils.getPackageLogger();
 
 
     /**
@@ -73,32 +77,36 @@ public class CommandRecord implements Comparable<CommandRecord> {
         this.drupalConnection = drupalConnection;
         //drupalConnection.connect();
 
-        this.id = DrupalUtils.getLong(row.get("id")); // if id is null, it means this is a dummy record.
+        this.id = DrupletUtils.getLong(row.get("id")); // if id is null, it means this is a dummy record.
         this.app = (String) row.get("app");     // could be null for dummys, assert app != null;
         this.command = (String) row.get("command");    // could be null for dummys, assert app != null;
         this.description = (String) row.get("description");   // note: even though this can be null, class type cast would still work.
-        this.uid = DrupalUtils.getLong(row.get("uid"));
-        this.eid = DrupalUtils.getLong(row.get("eid"));
-        this.created = DrupalUtils.getLong(row.get("created"));
+        this.uid = DrupletUtils.getLong(row.get("uid"));
+        this.eid = DrupletUtils.getLong(row.get("eid"));
+        this.created = DrupletUtils.getLong(row.get("created"));
 
         this.input = (byte[]) row.get("input");
         this.output = (byte[]) row.get("output");
-        this.id1 = DrupalUtils.getLong(row.get("id1"));
-        this.id2 = DrupalUtils.getLong(row.get("id2"));
+        this.id1 = DrupletUtils.getLong(row.get("id1"));
+        this.id2 = DrupletUtils.getLong(row.get("id2"));
+        this.id3 = DrupletUtils.getLong(row.get("id3"));
+        this.id4 = DrupletUtils.getLong(row.get("id4"));
         this.number1 = (Float) row.get("number1");
         this.number2 = (Float) row.get("number2");
         this.number3 = (Float) row.get("number3");
         this.number4 = (Float) row.get("number4");
         this.string1 = (String) row.get("string1");
         this.string2 = (String) row.get("string2");
+        this.string3 = (String) row.get("string3");
+        this.string4 = (String) row.get("string4");
 
         this.status = (String) row.get("status");
         this.control = (String) row.get("control");
         this.message = (String) row.get("message");
-        this.weight = DrupalUtils.getLong(row.get("weight"));   // could be null for dummies, assert weight != null;
-        this.start = DrupalUtils.getLong(row.get("start"));
-        this.end = DrupalUtils.getLong(row.get("end"));
-        this.checkpoint = DrupalUtils.getLong(row.get("checkpoint"));
+        this.weight = DrupletUtils.getLong(row.get("weight"));   // could be null for dummies, assert weight != null;
+        this.start = DrupletUtils.getLong(row.get("start"));
+        this.end = DrupletUtils.getLong(row.get("end"));
+        this.checkpoint = DrupletUtils.getLong(row.get("checkpoint"));
         this.progress = (Float) row.get("progress");
     }
 
@@ -111,11 +119,11 @@ public class CommandRecord implements Comparable<CommandRecord> {
             // TODO: print record to logger.
         }
 
-        String sql = "UPDATE {async_command} SET output=?, id1=?, id2=?, number1=?, number2=?, number3=?, number4=?, " +
-                "string1=?, string2=?, status=?, control=?, message=?, weight=?, " +
+        String sql = "UPDATE {async_command} SET output=?, id1=?, id2=?, id3=?, id4=?, number1=?, number2=?, number3=?, number4=?, " +
+                "string1=?, string2=?, string3=?, string4=?, status=?, control=?, message=?, weight=?, " +
                 "start=?, end=?, checkpoint=?, progress=? WHERE id=?";
         try {
-            drupalConnection.update(sql, output, id1, id2, number1, number2, number3, number4, string1, string2,
+            drupalConnection.update(sql, output, id1, id2, id3, id4, number1, number2, number3, number4, string1, string2, string3, string4,
                     status, control, message, weight, start, end, checkpoint, progress, id);
         } catch (SQLException e) {
             AsyncCommand.logger.severe("Cannot update command record. Fatal error. Record id: " + id);
@@ -136,7 +144,7 @@ public class CommandRecord implements Comparable<CommandRecord> {
         assert drupalConnection != null;
 
         try {
-            drupalConnection.update("UPDATE {async_command} SET " + fieldName + "=?", fieldValue);
+            drupalConnection.update("UPDATE {async_command} SET " + fieldName + "=? WHERE id=?", fieldValue, id);
         } catch (SQLException e) {
             AsyncCommand.logger.severe("Cannot update command record for field '" + fieldName + "'. Record id: " + id);
             throw new DatabaseRuntimeException(e);
@@ -264,6 +272,14 @@ public class CommandRecord implements Comparable<CommandRecord> {
     public Long getId2() {
         return id2;
     }
+    
+    public Long getId3() {
+        return id3;
+    }
+
+    public Long getId4() {
+        return id4;
+    }
 
     public Float getNumber1() {
         return number1;
@@ -288,9 +304,21 @@ public class CommandRecord implements Comparable<CommandRecord> {
     public String getString2() {
         return string2;
     }
+    
+    public String getString3() {
+        return string3;
+    }
 
-    public String getControl() {
-        return control;
+    public String getString4() {
+        return string4;
+    }
+
+    public AsyncCommand.Control getControl() {
+        if (control != null) {
+            return AsyncCommand.Control.parse(control);
+        } else {
+            return null;
+        }
     }
 
     public String getMessage() {
@@ -328,6 +356,14 @@ public class CommandRecord implements Comparable<CommandRecord> {
     public void setId2(Long id2) {
         this.id2 = id2;
     }
+    
+    public void setId3(Long id3) {
+        this.id1 = id3;
+    }
+
+    public void setId4(Long id4) {
+        this.id4 = id4;
+    }
 
     public void setNumber1(Float number1) {
         this.number1 = number1;
@@ -352,13 +388,22 @@ public class CommandRecord implements Comparable<CommandRecord> {
     public void setString2(String string2) {
         this.string2 = string2;
     }
+    
+    public void setString3(String string3) {
+        this.string3 = string3;
+    }
+
+    public void setString4(String string4) {
+        this.string4 = string4;
+    }
 
     public void setStatus(String status) {
         this.status = status;
     }
 
-    public void setControl(String control) {
-        this.control = control;
+    public void setControl(AsyncCommand.Control control) {
+        this.control = control.toString();
+        assert this.control.length() == 4;
     }
 
     public void setMessage(String message) {

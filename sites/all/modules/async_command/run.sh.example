@@ -10,15 +10,15 @@
 command -v java >/dev/null || { echo "Cannot find java program. Please install Java first and make sure the executable is under PATH."; exit 1;}
 
 # config CLASSPATH: add all jar files under lib.
-CLASSPATH="${CLASSPATH}:drupal-app.jar:$(find "lib" -name "*.jar" | tr '\n' ':')"
+CLASSPATH="${CLASSPATH}:async-command.jar:$(find "lib" -name "*.jar" | tr '\n' ':')"
 
 
 
 # execute the command, find config.properties in working directory
-java -cp $CLASSPATH org.drupal.project.async_command.DefaultDrupalApp
+java -cp $CLASSPATH org.drupal.project.async_command.DefaultDruplet
 
 # or, execute the command, find config.properties specified by CONFIG_FILE
-#java -cp $CLASSPATH org.drupal.project.async_command.DefaultDrupalApp -c $CONFIG_FILE
+#java -cp $CLASSPATH org.drupal.project.async_command.DefaultDruplet -c $CONFIG_FILE
 
-# or, read the help of DefaultDrupalApp
-#java -cp $CLASSPATH org.drupal.project.async_command.DefaultDrupalApp -h
+# or, read the help of DefaultDruplet
+#java -cp $CLASSPATH org.drupal.project.async_command.DefaultDruplet -h

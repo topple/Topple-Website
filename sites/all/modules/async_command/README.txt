@@ -12,7 +12,7 @@ Conceptually, you need 2 computers: the Drupal server for your Drupal site, and 
 
 To install and config async_command, please follow these steps:
 
-**Step 1**. Install the Async Command module to your Drupal server under sites/all/modules/async_command. Then, copy the 'lib' sub-directory and drupal-app.jar to any folder on the computation server. If your computation server is also your Drupal server, you can leave 'lib' as-is, but be aware that the 3rd party program might consume lots of resources on your Drupal server.
+**Step 1**. Install the Async Command module to your Drupal server under sites/all/modules/async_command. Then, copy the 'lib' sub-directory and async-command.jar to any folder on the computation server. If your computation server is also your Drupal server, you can leave 'lib' as-is, but be aware that the 3rd party program might consume lots of resources on your Drupal server.
 
 **Step 2**. Follow the example of config.properties.example and create a config.properties file on your computation server. 
 
@@ -31,7 +31,7 @@ http://drupal.org/project/mturk (written in Jython)
 
 For the Drupal server, you'll write a Drupal module for user interaction. You need "async_command_create_command()" to issue async commands. You can use the default Views to display commands execution history.
 
-For the computation server, you can write 3rd party programs by extending "org.drupal.project.async_command.GenericDrupalApp". This class provides basic functions to read Drupal system variables, read commands stored {async_command} table, and so on. (TODO: More documentation on how to program with Async Command)
+For the computation server, you can write 3rd party programs by extending "org.drupal.project.async_command.Druplet". This class provides basic functions to read Drupal system variables, read commands stored {async_command} table, and so on. (TODO: More documentation on how to program with Async Command)
 
 To use the Java libraries in languages other than Jython/JRuby/Groovy/Java, please refer to JSR 223 (http://download.oracle.com/javase/6/docs/technotes/guides/scripting/index.html)
 

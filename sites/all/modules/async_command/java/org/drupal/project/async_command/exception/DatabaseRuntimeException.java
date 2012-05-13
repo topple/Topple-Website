@@ -6,7 +6,7 @@ import java.sql.SQLException;
  * Handles database related exceptions.
  * Only supports rethrow SQLException.
  */
-public class DatabaseRuntimeException extends DrupalAppException {
+public class DatabaseRuntimeException extends DrupletException {
     public DatabaseRuntimeException(SQLException t) {
         super(t);
     }

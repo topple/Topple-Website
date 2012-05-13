@@ -20,7 +20,7 @@ function async_command_drush_command() {
       'description' => 'Description of this command. Enclose spaces in double quotes.',
       'options'     => 'Vertical bar separated key-value pairs. Eg. option1=value1|option2=value2'
     ),
-    
+
     //'callback' => 'async_command_create_command',
     //'callback arguments' => array('default'),
     
@@ -32,6 +32,9 @@ function async_command_drush_command() {
   );
   $items['async-command-purge'] = array(
     'description' => 'Remove all commands where status is not null.',
+    'options' => array(
+        'force' => 'Controls whether to remove all commands or finished ones.'
+      ),
     'examples' => array(
       'drush async-command-purge' => 'Purge all finished commands.',
     ),
@@ -69,6 +72,12 @@ function drush_async_command($app, $command, $description = NULL, $options = NUL
 }
 
 function drush_async_command_purge() {
-  db_query("DELETE FROM {async_command} WHERE status IS NOT NULL");
+  $force = drush_get_option('force', NULL);
+  if (!$force) {
+    db_query("DELETE FROM {async_command} WHERE status IS NOT NULL");
+  }
+  else {
+    db_query("DELETE FROM {async_command}");
+  }
   drush_print("Purge {async_command} table successful.");
 }

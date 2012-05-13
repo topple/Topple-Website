@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<buildpath>
+	<buildpathentry kind="src" path="checkout_page_example"/>
+	<buildpathentry kind="src" path="checkout_pane_example"/>
+	<buildpathentry kind="src" path="line_item_example"/>
+	<buildpathentry kind="src" path="order_example"/>
+	<buildpathentry kind="src" path="price_example"/>
+	<buildpathentry kind="src" path="product_example"/>
+	<buildpathentry kind="con" path="org.eclipse.php.core.LANGUAGE"/>
+</buildpath>

@@ -1,7 +1,7 @@
 package org.drupal.project.async_command;
 
 import org.apache.commons.codec.binary.Base64;
-import org.drupal.project.async_command.exception.DrupalAppException;
+import org.drupal.project.async_command.exception.DrupletException;
 
 import java.util.Properties;
 import java.util.logging.Logger;
@@ -13,7 +13,7 @@ import java.util.logging.Logger;
  */
 public class EncryptedFieldAdapter {
 
-    private static Logger logger = DrupalUtils.getPackageLogger();
+    private static Logger logger = DrupletUtils.getPackageLogger();
 
     /**
      * Encryption method.
@@ -82,9 +82,9 @@ public class EncryptedFieldAdapter {
                 break;
             case MCRYPT:
                 if (secretkey == null) {
-                    throw new DrupalAppException("Need to set secretKey in order to decrypt MCRYPT message.");
+                    throw new DrupletException("Need to set secretKey in order to decrypt MCRYPT message.");
                 }
-                original = DrupalUtils.evalPhp("echo rtrim(mcrypt_decrypt(MCRYPT_3DES,''{0}'',base64_decode(''{1}''),''ecb''),''\\0'');", this.secretkey, encrypted);
+                original = DrupletUtils.evalPhp("echo rtrim(mcrypt_decrypt(MCRYPT_3DES,''{0}'',base64_decode(''{1}''),''ecb''),''\\0'');", this.secretkey, encrypted);
                 original = original.trim();
                 break;
         }
@@ -93,7 +93,7 @@ public class EncryptedFieldAdapter {
 
     public Properties readSettings(String encrypted) {
         String original = readContent(encrypted);
-        return DrupalUtils.loadProperties(original);
+        return DrupletUtils.loadProperties(original);
     }
 
 }

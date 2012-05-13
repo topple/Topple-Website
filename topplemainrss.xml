@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<rss version="2.0">
+
+<channel>
+  <title>ain page feedW3Schools Home Page</title>
+  <link>feeeeedddd</link>
+  <description>yupyup its a feed</description>
+  <item>
+    <title>new product in stock for johns ties</title>
+    <link>http://www.google.com</link>
+    <description>should link to google</description>
+  </item>
+<item>
+    <title>a new store was added!!!</title>
+    <link>http://www.yahoo.com</link>
+    <description>should link to yahoo</description>
+  </item>
+ <item>
+    <title>check out the deals here!!!</title>
+    <link>http://www.facebook.com</link>
+    <description>should link to facebook</description>
+  </item>
+</channel>
+
+</rss>

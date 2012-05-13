@@ -1,0 +1,8 @@
+name = Topple Commerce
+description = Provides additional and modified features to Drupal Commerce required by Topple.
+package = Topple
+
+dependencies[] = commerce_product
+dependencies[] = views
+core = 7.x
+

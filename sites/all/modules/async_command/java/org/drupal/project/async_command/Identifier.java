@@ -4,7 +4,7 @@ import java.lang.annotation.*;
 
 
 /**
- * Provides an optional identifier to DrupalApp or AsyncCommand.
+ * Provides an optional identifier to Druplet or AsyncCommand.
  * If not given, the default identifier is just the class name.
  */
 @Retention(RetentionPolicy.RUNTIME)

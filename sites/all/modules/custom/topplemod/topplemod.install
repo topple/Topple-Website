@@ -98,7 +98,7 @@ function topplemod_schema() {
         'length' => 255,
         'default' => 'New Zealand',
         'not null' => TRUE,
-      ),
+      ),     
     ),
   
     'primary key' => array('uid'),
@@ -126,6 +126,14 @@ function topplemod_schema() {
         'default' => 0,
         'description' => 'The {users}.uid to store additional fields',
       ),
+      
+      'domain_id' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Domain ID associated to the user, see {domain} table',
+      ),
           
       'storename' => array(
         'description' => 'Name of Store',
@@ -146,6 +154,14 @@ function topplemod_schema() {
         'type' => 'varchar',
         'length' => 350, 
       ),
+      
+      'score' => array(
+        'description' => 'Store Topple ranking',
+        'type' => 'numeric',
+        'precision' => 8,
+        'scale' => 8,
+        'unsigned' => TRUE,
+      ),
     ),  
     
     'primary key' => array('uid'),
@@ -154,6 +170,7 @@ function topplemod_schema() {
     'unique keys' => array(
       'storename' => array('storename'),
       'storeurl' => array('storeurl'),
+      'domain_id' => array('domain_id')
     ),
     
     //foreign keys not implemented by drupal yet, however
@@ -163,6 +180,14 @@ function topplemod_schema() {
       'uid' => array(
         'table' => 'users',
         'columns' => array('uid' => 'uid'),
+      ),
+       'domain_id' => array(
+         'table' => 'domain',
+         'columns' => array('domain_id' => 'domain_id'),
+      ),
+        'storeurl' => array(
+          'table' => 'domain',
+          'columns' => array('storeurl' => 'domain'),  
       ),
     ),  
   );

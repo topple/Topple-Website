@@ -9,6 +9,24 @@
 
 
 /**
+ * Implements hook_menu().
+ */
+function async_command_menu() {
+  $items['admin/reports/async_command'] = array(
+    'title' => 'Async command log',
+    'description' => 'Display the list of async commands execution logs.',
+    // TODO: could display some information about how to change the info to display in views.
+    'page callback' => 'views_embed_view',
+    'page arguments' => array('async_command_default'),
+    'access arguments' => array('access site reports'),
+    //'position' => 'left',
+    //'weight' => 0,
+  );
+  return $items;
+}
+
+
+/**
  * Creates a command and save to the {async_command} queue. Duplicate command would not get saved twice.
  * To force saving a duplicate command, mannually set the 'created' field or any input field with different value in $options.
  *
@@ -85,7 +103,7 @@ function async_command_create_command($app, $command, $description = NULL, $opti
  * Update fields of the command record.
  *
  * @param $id ID of the command.
- * @param $fields field=>value pairs. Make sure all fields are valid, otherwise would throw errors.
+ * @param $fields array Make sure all fields are valid, otherwise would throw errors.
  * @return the number of updated record. 0 means not successful.
  */
 function async_command_update_command($id, $fields) {

@@ -1,0 +1,89 @@
+<?php 
+
+/**
+ * Adds Store Ownership columns to Commerce module.
+ */
+
+/**
+ * Creates tables used for drupal commerce.
+ * currently commented out while things are thought over.
+ * -Not wise to edit tables of contrib modules so these tables mainly hold additional data
+ */
+
+/*
+
+function topplecom_schema(){
+  
+  $schema['commerce_products_additional'] = array(
+    'description' => 'Stores additional data for products',
+  
+    'fields' => array(
+      
+      'product_id' => array(
+        'description' => 'The primary identifier for a product.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      
+      'store_id' => array(
+        'description' => 'The ID of the store this product belongs to.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      
+      ''
+      
+    ),
+    
+    'primary key' => array('product_id' , 'store_id'),
+    
+    'foreign keys' => array(
+      'product_owner' => array(
+        'table' => 'users_store',
+        'columns' => array('store_id' => 'uid'),
+      ),
+      'product_exists' => array(
+        'table' => 'commerce_product',
+        'columns' => array('product_id' => 'product_id'),
+      ),
+    ),   
+  );
+  
+}
+
+
+function topplecom_update_7100(){
+  
+  if(db_table_exists('commerce_product')){
+    $spec = array(
+      'type' => 'int',
+      'description' => 'The ID of the store that owns the product',
+      'unsigned' => TRUE,
+    );
+    db_add_field('commerce_product', 'store_id', $spec);   
+  }
+  
+  
+  if(db_table_exists('commerce_product_revision')){
+    $spec = array(
+      'type' => 'int',
+      'description' => 'The ID of the store that owns the product',
+      'unsigned' => TRUE,
+    );
+    db_add_field('commerce_product_revision', 'store_id', $spec);
+  }
+  
+  if(db_table_exists('commerce_product_type')){
+    $spec = array(
+      'type' => 'int',
+      'description' => 'The ID of the store that owns the product',
+      'unsigned' => TRUE,
+    );
+    db_add_field('commerce_product_type', 'store_id', $spec);
+  }
+ 
+}
+*/
+

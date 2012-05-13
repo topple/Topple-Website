@@ -1,11 +1,13 @@
 package org.drupal.project.async_command.test;
 
 import org.drupal.project.async_command.DrupalConnection;
-import org.drupal.project.async_command.DrupalUtils;
+import org.drupal.project.async_command.DrupletConfig;
+import org.drupal.project.async_command.DrupletUtils;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import static org.junit.Assert.*;
@@ -18,12 +20,12 @@ public class DrupalConnectionTest {
 
     @Test
     public void testBatchUpdateAndVariables() throws Exception {
-        Properties prop = DrupalUtils.loadProperties(DrupalUtils.getConfigPropertiesFile());
+        Properties prop = DrupletUtils.loadProperties(DrupletUtils.getConfigPropertiesFile());
         prop.setProperty("db_max_batch_size", "2");
-        DrupalConnection conn = new DrupalConnection(prop);
+        DrupalConnection conn = new DrupalConnection(new DrupletConfig(prop));
         conn.connect();
 
-        String s1 = DrupalUtils.evalPhp("echo serialize(2);");
+        String s1 = DrupletUtils.evalPhp("echo serialize(2);");
         Object[][] params1 = {{"async_command_test1", "1".getBytes()}, {"async_command_test2", s1.getBytes()}, {"async_command_test3", "3".getBytes()}};
         conn.batch("INSERT INTO {variable}(name, value) VALUES(?, ?)", params1);
 
@@ -42,7 +44,7 @@ public class DrupalConnectionTest {
         assertEquals(s1, "Hello");
 
 
-        String s2 = DrupalUtils.evalPhp("echo serialize('abc');");
+        String s2 = DrupletUtils.evalPhp("echo serialize('abc');");
         Object[][] params2 = {{s2.getBytes(), "async_command_test1"}};
         conn.batch("UPDATE {variable} SET value=? WHERE name=?", params2);
         String v2 = (String) conn.variableGet("async_command_test1");
@@ -50,9 +52,9 @@ public class DrupalConnectionTest {
 
         // re-establish connection
         conn.close();
-        prop = DrupalUtils.loadProperties(DrupalUtils.getConfigPropertiesFile());
+        prop = DrupletUtils.loadProperties(DrupletUtils.getConfigPropertiesFile());
         prop.setProperty("db_max_batch_size", "0");
-        conn = new DrupalConnection(prop);
+        conn = new DrupalConnection(new DrupletConfig(prop));
         conn.connect();
 
         Object[][] params3 = {{"async_command_test1"}, {"async_command_test2"}, {"async_command_test3"}};
@@ -64,7 +66,7 @@ public class DrupalConnectionTest {
 
     @Test
     public void testQuery() throws Exception {
-        DrupalConnection conn = DrupalConnection.create();
+        DrupalConnection conn = new DrupalConnection(DrupletConfig.load());
         conn.connect();
         long uid = (Long) conn.queryValue("SELECT uid FROM {users} WHERE uid=1");
         assertTrue(uid == 1L);
@@ -87,7 +89,7 @@ public class DrupalConnectionTest {
 
     @Test
     public void testAutoIncrement() throws Exception {
-        DrupalConnection conn = DrupalConnection.create();
+        DrupalConnection conn = new DrupalConnection(DrupletConfig.load());
         conn.connect();
 
         long max = (Long) conn.queryValue("SELECT max(rid) FROM {role}");
@@ -101,6 +103,22 @@ public class DrupalConnectionTest {
         assertEquals(r3, max);
 
         conn.close();
+    }
+
+    @Test
+    public void testColumnLabel() throws Exception {
+        DrupalConnection conn = new DrupalConnection(DrupletConfig.load());
+        conn.connect();
+        List<Map<String, Object>> results = conn.query("SELECT uid FROM {users} WHERE uid=1");
+        assertTrue(results.size() == 1);
+        long uid = (Long) results.get(0).get("uid");
+        assertEquals(1, uid);
+
+        results = conn.query("SELECT uid AS id FROM {users} WHERE uid=1");
+        assertTrue(results.size() == 1);
+        uid = (Long) results.get(0).get("id");
+        assertEquals(1, uid);
+        assertTrue(!results.get(0).containsKey("uid"));
     }
 
 }

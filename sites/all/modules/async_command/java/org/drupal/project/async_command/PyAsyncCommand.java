@@ -9,16 +9,16 @@ abstract public class PyAsyncCommand extends AsyncCommand {
      * Call to a function to initialize in Jython, because Jython doesn't support function overloading.
      *
      * @param record
-     * @param drupalApp
+     * @param druplet
      */
-    public PyAsyncCommand(CommandRecord record, GenericDrupalApp drupalApp) {
-        super(record, drupalApp);
+    public PyAsyncCommand(CommandRecord record, Druplet druplet) {
+        super(record, druplet);
         initialize();
     }
 
     protected PyAsyncCommand() {
         super();
-        logger.fine("Default constructor called for PyAsyncCommand. Manually set record and drupalApp and call initialize() required.");
+        logger.fine("Default constructor called for PyAsyncCommand. Manually set record and druplet and call initialize() required.");
     }
 
     protected void initialize() {

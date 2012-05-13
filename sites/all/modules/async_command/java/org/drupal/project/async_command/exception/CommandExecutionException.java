@@ -1,9 +1,9 @@
 package org.drupal.project.async_command.exception;
 
 /**
- * This is the exception that can be handled by the DrupalApp.
+ * This is the exception that can be handled by the Druplet.
  */
-public class CommandExecutionException extends DrupalAppException {
+public class CommandExecutionException extends DrupletException {
     // Commands should set error status and message in CommandRecord.
     //private AsyncCommand.Status status;
 

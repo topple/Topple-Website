@@ -2,7 +2,7 @@ package org.drupal.project.async_command;
 
 import org.apache.commons.dbutils.QueryRunner;
 import org.drupal.project.async_command.exception.DatabaseRuntimeException;
-import org.drupal.project.async_command.exception.DrupalAppException;
+import org.drupal.project.async_command.exception.DrupletException;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -19,7 +19,7 @@ import java.util.logging.Logger;
  */
 public class BatchUploader extends Thread {
 
-    private static Logger logger = DrupalUtils.getPackageLogger();
+    private static Logger logger = DrupletUtils.getPackageLogger();
     private final BlockingQueue<Object[]> queue = new LinkedBlockingQueue<Object[]>();
     private final Connection connection;
     private final PreparedStatement preparedSql;
@@ -63,7 +63,7 @@ public class BatchUploader extends Thread {
         try {
             queue.put(row);
         } catch (InterruptedException e) {
-            throw new DrupalAppException(e);
+            throw new DrupletException(e);
         } finally {
             notifyAll();
         }
@@ -111,7 +111,7 @@ public class BatchUploader extends Thread {
                 try {
                     wait();
                 } catch (InterruptedException e) {
-                    throw new DrupalAppException(e);
+                    throw new DrupletException(e);
                 }
             }
         }

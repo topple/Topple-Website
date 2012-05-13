@@ -27,12 +27,16 @@ function async_command_schema() {
       'output'  => array('type' => 'blob', 'not null' => FALSE, 'description' => 'Return results for this command',),
       'id1'     => array('type' => 'int', 'not null' => FALSE, 'description' => "Optional ID, suggested for input",),
       'id2'     => array('type' => 'int', 'not null' => FALSE, 'description' => "Optional ID, suggested for output",),
+      'id3'     => array('type' => 'int', 'not null' => FALSE, 'description' => "Optional ID, suggested for input",),
+      'id4'     => array('type' => 'int', 'not null' => FALSE, 'description' => "Optional ID, suggested for output",),
       'number1' => array('type' => 'float', 'not null' => FALSE, 'description' => "Optional number, suggested for input",),
       'number2' => array('type' => 'float', 'not null' => FALSE, 'description' => "Optional number, suggested for output",),
       'number3' => array('type' => 'float', 'not null' => FALSE, 'description' => "Optional number, suggested for input",),
       'number4' => array('type' => 'float', 'not null' => FALSE, 'description' => "Optional number, suggested for output",),
       'string1' => array('type' => 'varchar', 'length' => 1000, 'not null' => FALSE, 'description' => "Optional string, suggested for input",),
       'string2' => array('type' => 'varchar', 'length' => 1000, 'not null' => FALSE, 'description' => "Optional string, suggested for output",),
+      'string3' => array('type' => 'varchar', 'length' => 1000, 'not null' => FALSE, 'description' => "Optional string, suggested for input",),
+      'string4' => array('type' => 'varchar', 'length' => 1000, 'not null' => FALSE, 'description' => "Optional string, suggested for output",),
       //'dependency'  => array('type' => 'int', 'not null' => FALSE, 'unsigned' => TRUE, 'description' => 'For serialized execution sequence, this links to the id of dependent command',),
       // session => array() session id, not implemented yet.
 
@@ -75,4 +79,16 @@ function async_command_update_7201() {
  */
 function async_command_update_7202() {
   db_drop_field('async_command', 'dependency');
+}
+
+/**
+ * Add id3, id4; and string3, string4
+ */
+function async_command_update_7203() {
+  $schema = async_command_schema();
+  $fields = $schema['async_command']['fields'];
+  db_add_field('async_command', 'id3', $fields['id3']);
+  db_add_field('async_command', 'id4', $fields['id4']);
+  db_add_field('async_command', 'string3', $fields['string3']);
+  db_add_field('async_command', 'string4', $fields['string4']);
 }

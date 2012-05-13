@@ -1,6 +1,6 @@
 package org.drupal.project.async_command.exception;
 
-public class ConfigLoadingException extends DrupalAppException {
+public class ConfigLoadingException extends DrupletException {
 
     public ConfigLoadingException(String message) {
         super(message);

@@ -2,18 +2,18 @@ package org.drupal.project.async_command;
 
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.dbcp.BasicDataSourceFactory;
+import org.apache.commons.dbutils.BasicRowProcessor;
 import org.apache.commons.dbutils.DbUtils;
 import org.apache.commons.dbutils.QueryRunner;
+import org.apache.commons.dbutils.RowProcessor;
 import org.apache.commons.dbutils.handlers.ArrayListHandler;
 import org.apache.commons.dbutils.handlers.MapListHandler;
 import org.apache.commons.dbutils.handlers.ScalarHandler;
-import org.drupal.project.async_command.exception.ConfigLoadingException;
 import org.drupal.project.async_command.exception.DatabaseRuntimeException;
-import org.drupal.project.async_command.exception.DrupalAppException;
+import org.drupal.project.async_command.exception.DrupletException;
 
 import javax.sql.DataSource;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.sql.*;
 import java.util.*;
 import java.util.logging.Logger;
@@ -30,12 +30,18 @@ public class DrupalConnection {
     /**
      * Database configuration.
      */
+    @Deprecated
     protected Properties config;
+
+    /**
+     * Configuration for Druplet, including config about the database.
+     */
+    protected DrupletConfig drupletConfig;
 
     /**
      * Default logger for the whole package.
      */
-    protected static Logger logger = DrupalUtils.getPackageLogger();
+    protected static Logger logger = DrupletUtils.getPackageLogger();
 
     // attention: use with caution. don't know if it'll cause problems by providing the datasource to outside programs.
     public DataSource getDataSource() {
@@ -68,35 +74,26 @@ public class DrupalConnection {
         return databaseType;
     }
 
-
+    /**
+     * Factory method. Deprecated,
+     * @return A DrupalConnection using default config files.
+     */
+    @Deprecated
     public static DrupalConnection create() {
-        DrupalConnection drupalConnection;
-        try {
-            File configFile = DrupalUtils.getConfigPropertiesFile();
-            drupalConnection = new DrupalConnection(configFile); // OK. we can get a drupalConnection
-        } catch (FileNotFoundException e) {
-            logger.warning("Cannot find config.properties file. Try settings.php now.");
-            try {
-                File settingsFile = DrupalUtils.getDrupalSettingsFile();
-                Properties config = DrupalUtils.convertSettingsToConfig(settingsFile);
-                drupalConnection = new DrupalConnection(config);
-            } catch (FileNotFoundException e1) {
-                throw new ConfigLoadingException("Cannot find either config.properties or settings.php to create DrupalConnection object.");
-            }
-        }
+        DrupalConnection drupalConnection = new DrupalConnection(DrupletUtils.loadConfig());
         return drupalConnection;
     }
 
     /**
      * Initializes database connection properties, set default properties if not given.
-     *
-     * @see <a href="http://commons.apache.org/dbcp/configuration.html">DBCP configurations</a>
-     * @see <a href="http://dev.mysql.com/doc/refman/5.1/en/connector-j-reference-configuration-properties.html">MySQL configurations</a>
+     * Deprecated. Use DrupletConfig instead.
      *
      * @param config Database configuration
      */
+    @Deprecated
     public DrupalConnection(Properties config) {
-        DrupalUtils.prepareConfig(config);
+        // attention: this prepareConfig is duplicate in Druplet?
+        DrupletUtils.prepareConfig(config);
         this.config = config;
 
         drupalVersion = Integer.parseInt(config.getProperty("drupal_version"));
@@ -129,25 +126,37 @@ public class DrupalConnection {
         if (maxBatchSize > 0) {
             logger.fine("Batch SQL size: " + maxBatchSize);
         }
+    }
 
+
+
+    public DrupalConnection(DrupletConfig drupletConfig) {
+        // TODO: might consider remove the variables and directly use the getters instead.
+        drupalVersion = drupletConfig.getDrupalVersion();
+        databaseType = drupletConfig.getDatabaseType();
+        dbPrefix = drupletConfig.getDrupalDbPrefix();
+        maxBatchSize = drupletConfig.getMaxBatchSize();
+        this.drupletConfig = drupletConfig;
     }
 
     /**
-     * Initializes database connection properties.
+     * Initializes database connection properties. Deprecated. Use DrupletConfig instead.
      *
      * @param configString Properties string.
      */
+    @Deprecated
     public DrupalConnection(String configString) {
-        this(DrupalUtils.loadProperties(configString));
+        this(DrupletUtils.loadProperties(configString));
     }
 
     /**
-     * Initializes database connection properties.
+     * Initializes database connection properties. Deprecated. Use DrupletConfig instead.
      *
      * @param configFile Properties file to config database connection.
      */
+    @Deprecated
     public DrupalConnection(File configFile) {
-        this(DrupalUtils.loadProperties(configFile));
+        this(DrupletUtils.loadProperties(configFile));
     }
 
 
@@ -170,10 +179,10 @@ public class DrupalConnection {
 
         try {
             // create data source.
-            dataSource = (BasicDataSource) BasicDataSourceFactory.createDataSource(config);
+            dataSource = (BasicDataSource) BasicDataSourceFactory.createDataSource(drupletConfig.getProperties());
         } catch (Exception e) {
             logger.severe("Error initializing DataSource for Drupal database connection.");
-            throw new DrupalAppException(e);
+            throw new DrupletException(e);
         }
 
         // test Drupal connection
@@ -229,7 +238,7 @@ public class DrupalConnection {
      */
     private void assertConnection() {
         if (!checkConnection()) {
-            throw new DrupalAppException("Drupal database connection not initialized or closed. Please check whether the Drupal database is up and running and the network is fine.");
+            throw new DrupletException("Drupal database connection not initialized or closed. Please check whether the Drupal database is up and running and the network is fine.");
         }
     }
 
@@ -267,7 +276,26 @@ public class DrupalConnection {
     public List<Map<String, Object>> query(String sql, Object... params) throws SQLException {
         assertConnection();
         QueryRunner q = new QueryRunner(dataSource);
-        List<Map<String, Object>> result = q.query(d(sql), new MapListHandler(), params);
+        // This is a hack in response to https://issues.apache.org/jira/browse/DBUTILS-24
+        // Modify BasicRowProcessor to use the column label
+        RowProcessor hackRowProcessor = new BasicRowProcessor() {
+            @Override
+            public Map<String, Object> toMap(ResultSet rs) throws SQLException {
+                // can't use CaseInsensitiveHashMap directly because it is private.
+                Map<String, Object> result = super.toMap(rs);
+                // test if getColumnName() is the same as getColumnLabel()
+                ResultSetMetaData rsmd = rs.getMetaData();
+                int cols = rsmd.getColumnCount();
+                for (int i = 1; i <= cols; i++) {
+                    if (!rsmd.getColumnName(i).equals(rsmd.getColumnLabel(i))) {
+                        result.remove(rsmd.getColumnName(i));
+                        result.put(rsmd.getColumnLabel(i), rs.getObject(i));
+                    }
+                }
+                return result;
+            }
+        };
+        List<Map<String, Object>> result = q.query(d(sql), new MapListHandler(hackRowProcessor), params);
         return result;
     }
 
@@ -442,8 +470,8 @@ public class DrupalConnection {
             if (serializedBytes == null) {
                 return null;  // variable doesn't exists.
             }
-            String serialized = DrupalUtils.convertBlobToString(serializedBytes);
-            return DrupalUtils.unserializePhp(serialized);
+            String serialized = DrupletUtils.convertBlobToString(serializedBytes);
+            return DrupletUtils.unserializePhp(serialized);
         } catch (SQLException e) {
             throw new DatabaseRuntimeException(e);
         }
@@ -462,10 +490,10 @@ public class DrupalConnection {
         String serialized;
         if (String.class.isInstance(varValue)) {
             // string, boolean, array
-            serialized = DrupalUtils.evalPhp("echo serialize(''{0}'');", varValue);
+            serialized = DrupletUtils.evalPhp("echo serialize(''{0}'');", varValue);
         } else {
             // numeric
-            serialized = DrupalUtils.evalPhp("echo serialize({0});", varValue);
+            serialized = DrupletUtils.evalPhp("echo serialize({0});", varValue);
         }
         byte[] serializedBytes = serialized.getBytes();
         try {
@@ -505,16 +533,16 @@ public class DrupalConnection {
     }
 
     /**
-     * Retrieve a list of pending commands for the given app.
+     * Retrieve a list of new and unhandled commands for the given app.
      *
      * @param appName
      * @return
      */
-    public List<CommandRecord> retrievePendingCommandRecord(String appName) {
+    public List<CommandRecord> retrieveNewCommandRecord(String appName) {
         assert appName != null;
-        logger.finest("Retrieving pending commands for " + appName);
+        logger.finest("Retrieving new and unhandled commands for " + appName);
         StringBuffer sqlWhere = new StringBuffer();
-        sqlWhere.append("WHERE app='").append(appName).append("' AND (status IS NULL OR status='").append(AsyncCommand.Status.PENDING.toString()).append("')");
+        sqlWhere.append("WHERE app='").append(appName).append("' AND status IS NULL");
         return retrieveAnyCommandRecord(sqlWhere.toString());
     }
 

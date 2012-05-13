@@ -9,15 +9,15 @@ public class PingMe extends AsyncCommand {
     private String pongMessage;
     private Long sleepTime;
 
-    public PingMe(CommandRecord record, GenericDrupalApp drupalApp) {
-        super(record, drupalApp);
+    public PingMe(CommandRecord record, Druplet druplet) {
+        super(record, druplet);
     }
 
     @Override
     protected void beforeExecute() {
         super.beforeExecute();
         this.pingMessage = record.getString1();
-        this.sleepTime = DrupalUtils.getLong(record.getNumber1());
+        this.sleepTime = DrupletUtils.getLong(record.getNumber1());
     }
 
     @Override
